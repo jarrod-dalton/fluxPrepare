@@ -1,0 +1,22 @@
+Package: patientSimPrepare
+Type: Package
+Title: Prepare Training/Test/Validation Datasets for patientSim ModelBundles
+Version: 0.8.2
+Authors@R: c(
+    person("Jarrod", "Dalton", role = c("aut", "cre"))
+  )
+Description: Utilities to translate observational event and measurement tables, aligned to a patientSimCore schema,
+    into reproducible training/test/validation datasets for one-step event and state transition models intended
+    for use inside patientSim ModelBundles. This package is intentionally spec-first and schema-aligned.
+License: Proprietary
+Encoding: UTF-8
+Imports:
+    stats,
+    utils,
+    patientSimCore (>= 1.2.5)
+Suggests:
+    testthat (>= 3.0.0),
+    digest,
+    jsonlite,
+    qs,
+    arrow

@@ -1,0 +1,313 @@
+#' Batch-build TTV datasets to disk
+#'
+#' Phase 5: disk-backed batch workflows.
+#' Builds one dataset per spec (and per optional patient chunk), writes the dataset and metadata to disk,
+#' and returns a manifest describing outputs.
+#'
+#' @param specs List of spec objects created by \code{ps_spec_state()} and/or \code{ps_spec_event()}.
+#'   Specs are validated at construction time.
+#' @param splits Output of \code{ps_prepare_splits()} (patient_id + split).
+#' @param events Canonical event stream from \code{ps_prepare_events()} (required for event tasks).
+#' @param observations Canonical observation store from \code{ps_prepare_observations()} (required for state tasks).
+#' @param followup Optional follow-up table with patient_id and follow-up columns.
+#' @param out_dir Directory to write outputs.
+#' @param format Output format: \code{"qs"}, \code{"csv"}, \code{"parquet"}, or \code{"rds"}.
+#' @param overwrite If FALSE, error if output files already exist.
+#' @param seed Optional integer seed used for chunking and any per-spec sampling.
+#' @param strict If TRUE, stop on first error; if FALSE, continue and record errors in manifest.
+#' @param compress If TRUE, compress outputs where supported (qs, csv.gz). Parquet is already compressed by codec.
+#' @param manifest_name Base filename for manifest outputs.
+#' @param chunk Optional list controlling patient chunking. Supported:
+#'   \describe{
+#'     \item{method}{\code{"none"}, \code{"n_chunks"}, \code{"chunk_size"}, \code{"pct"}.}
+#'     \item{n_chunks}{Integer number of chunks (for method = "n_chunks").}
+#'     \item{chunk_size}{Integer patients per chunk (for method = "chunk_size").}
+#'     \item{pct}{Fraction in (0,1] of patients per chunk (for method = "pct").}
+#'     \item{shuffle}{Logical, default TRUE.}
+#'   }
+#'
+#' @return A \code{data.frame} manifest with class \code{"ps_manifest"}.
+#' @export
+ps_build_ttv_batch <- function(specs,
+                               splits,
+                               ctx = NULL,
+                               events = NULL,
+                               observations = NULL,
+                               followup = NULL,
+                               out_dir,
+                               format = c("qs", "csv", "parquet", "rds"),
+                               overwrite = FALSE,
+                               seed = NULL,
+                               strict = TRUE,
+                               compress = TRUE,
+                               manifest_name = "ttv_manifest",
+                               chunk = list(method = "none", shuffle = TRUE)) {
+
+  format <- match.arg(format)
+
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+
+  if (!is.list(specs) || length(specs) == 0) {
+    stop("`specs` must be a non-empty list of spec objects.")
+  }
+
+  # Required Suggests
+  if (!requireNamespace("digest", quietly = TRUE)) stop("Package 'digest' is required for batch mode (Suggests).")
+  if (!requireNamespace("jsonlite", quietly = TRUE)) stop("Package 'jsonlite' is required for metadata writing (Suggests).")
+
+  chunks <- ps_chunk_patients(splits = splits, chunk = chunk, seed = seed)
+
+  manifest_rows <- list()
+  spec_id <- 0L
+
+  for (s in specs) {
+    .ps_assert_spec(s, "ps_build_ttv_batch()")
+    spec_id <- spec_id + 1L
+    spec_name <- if (!is.null(s$name)) as.character(s$name) else NA_character_
+    task <- if (!is.null(s$task)) as.character(s$task) else NA_character_
+    fun <- if (!is.null(s$fun)) as.character(s$fun) else NA_character_
+    args <- if (!is.null(s$args)) s$args else list()
+
+    if (!task %in% c("event", "state")) {
+      stop(sprintf("Spec %d: `task` must be 'event' or 'state'.", spec_id))
+    }
+    if (!fun %in% c("ps_build_ttv_event", "ps_build_ttv_state")) {
+      stop(sprintf("Spec %d: `fun` must be 'ps_build_ttv_event' or 'ps_build_ttv_state'.", spec_id))
+    }
+    if (!is.list(args)) stop(sprintf("Spec %d: `args` must be a named list.", spec_id))
+
+    spec_hash <- ps_hash_spec(list(task = task, fun = fun, args = args))
+
+    for (chunk_id in seq_along(chunks)) {
+      pat_ids <- chunks[[chunk_id]]
+
+      # Filter shared inputs by chunk
+      splits_k <- splits[splits$patient_id %in% pat_ids, , drop = FALSE]
+      events_k <- if (!is.null(events)) events[events$patient_id %in% pat_ids, , drop = FALSE] else NULL
+      obs_k <- if (!is.null(observations)) observations[observations$patient_id %in% pat_ids, , drop = FALSE] else NULL
+      fu_k <- if (!is.null(followup)) followup[followup$patient_id %in% pat_ids, , drop = FALSE] else NULL
+
+      # Merge shared args (per-spec overrides win)
+      call_args <- args
+      if (is.null(call_args$splits)) call_args$splits <- splits_k
+      if (!is.null(ctx) && is.null(call_args$ctx)) call_args$ctx <- ctx
+
+      if (task == "event") {
+        if (is.null(events_k) && is.null(call_args$events)) stop("Event task requires `events`.")
+        if (is.null(call_args$events)) call_args$events <- events_k
+        if (!is.null(fu_k) && is.null(call_args$followup)) call_args$followup <- fu_k
+      } else {
+        if (is.null(obs_k) && is.null(call_args$observations)) stop("State task requires `observations`.")
+        if (is.null(call_args$observations)) call_args$observations <- obs_k
+        if (!is.null(fu_k) && is.null(call_args$followup)) call_args$followup <- fu_k
+      }
+
+      # Ensure seed is available for any per-spec sampling
+      if (!is.null(seed) && is.null(call_args$seed)) call_args$seed <- seed
+      # Backward/alternate arg name support (tests/specs may use older names)
+      if (task != "event") {
+        if (!is.null(call_args$include_provenance) && is.null(call_args$keep_provenance)) {
+          call_args$keep_provenance <- isTRUE(call_args$include_provenance)
+          call_args$include_provenance <- NULL
+        }
+      }
+
+
+
+      ext <- switch(
+        format,
+        "qs" = "qs",
+        "csv" = if (isTRUE(compress)) "csv.gz" else "csv",
+        "parquet" = "parquet",
+        "rds" = "rds"
+      )
+
+      file_base <- sprintf("%s__%s__chunk%03d", task, spec_hash, chunk_id)
+      path_data <- file.path(out_dir, paste0(file_base, ".", ext))
+      path_meta <- file.path(out_dir, paste0(file_base, ".metadata.json"))
+
+      status <- "ok"
+      err <- NA_character_
+      n_rows <- NA_integer_
+      n_patients <- NA_integer_
+
+      # Skip existing unless overwrite
+      if (!overwrite && (file.exists(path_data) || file.exists(path_meta))) {
+        status <- "error"
+        err <- "Output exists and overwrite=FALSE."
+        if (strict) stop(err)
+      } else {
+        res <- tryCatch({
+          data <- do.call(get(fun, mode = "function"), call_args)
+
+          if (!is.data.frame(data)) stop("Builder did not return a data.frame.")
+
+          n_rows <- nrow(data)
+          n_patients <- length(unique(data$patient_id))
+
+          # Write dataset
+          ps_write_dataset(data = data, path = path_data, format = format, compress = compress)
+
+          # Metadata
+          meta <- list(
+            spec_id = spec_id,
+            spec_name = spec_name,
+            task = task,
+            fun = fun,
+            spec_hash = spec_hash,
+            chunk_id = chunk_id,
+            built_at = as.character(Sys.time()),
+            package = "patientSimPrepare",
+            package_version = as.character(utils::packageVersion("patientSimPrepare")),
+            n_rows = n_rows,
+            n_patients = n_patients,
+            split_counts = as.list(table(splits_k$split)),
+            spec = list(task = task, fun = fun, args = args)
+          )
+          ps_write_metadata(meta = meta, path = path_meta)
+
+          data
+        }, error = function(e) {
+          status <<- "error"
+          err <<- conditionMessage(e)
+          if (strict) stop(e)
+          NULL
+        })
+      }
+
+      manifest_rows[[length(manifest_rows) + 1L]] <- data.frame(
+        spec_id = spec_id,
+        spec_name = spec_name,
+        spec_hash = spec_hash,
+        task = task,
+        fun = fun,
+        chunk_id = chunk_id,
+        path_data = path_data,
+        path_metadata = path_meta,
+        package_version = as.character(utils::packageVersion("patientSimPrepare")),
+        built_at = as.character(Sys.time()),
+        n_rows = n_rows,
+        n_patients = n_patients,
+        status = status,
+        error_message = err,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+
+  manifest <- do.call(rbind, manifest_rows)
+  class(manifest) <- c("ps_manifest", class(manifest))
+
+  # Write manifest to disk
+  man_csv <- file.path(out_dir, paste0(manifest_name, ".csv"))
+  utils::write.csv(manifest, man_csv, row.names = FALSE)
+
+  man_rds <- file.path(out_dir, paste0(manifest_name, ".rds"))
+  saveRDS(manifest, man_rds)
+
+  manifest
+}
+
+#' Patient chunking helper
+#'
+#' @param splits Split table with patient_id.
+#' @param chunk List of chunking parameters. See \code{ps_build_ttv_batch()}.
+#' @param seed Optional seed for reproducible shuffling.
+#' @return A list of character vectors of patient_ids.
+#' @export
+ps_chunk_patients <- function(splits, chunk = list(method = "none", shuffle = TRUE), seed = NULL) {
+  if (is.null(splits) || !is.data.frame(splits) || !"patient_id" %in% names(splits)) {
+    stop("`splits` must be a data.frame with column `patient_id`.")
+  }
+  ids <- unique(as.character(splits$patient_id))
+
+  # Guard: ensure chunk parameters produce at least one valid chunk.
+  n_ids <- length(ids)
+  if (n_ids == 0L) return(list(character(0)))
+
+  method <- if (!is.null(chunk$method)) as.character(chunk$method) else "none"
+  shuffle <- if (!is.null(chunk$shuffle)) isTRUE(chunk$shuffle) else TRUE
+
+  if (!is.null(seed)) set.seed(seed)
+
+  if (shuffle && method != "none") {
+    ids <- sample(ids, length(ids), replace = FALSE)
+  }
+
+  if (method == "none") {
+    return(list(ids))
+  }
+
+  if (method == "n_chunks") {
+    n_chunks <- as.integer(chunk$n_chunks)
+    if (is.na(n_chunks) || n_chunks < 1) stop("chunk$n_chunks must be >= 1.")
+    if (n_chunks == 1L || length(ids) <= 1L) return(list(ids))
+    n_chunks <- min(n_chunks, length(ids))
+    # split into n nearly equal chunks
+    idx <- split(seq_along(ids), cut(seq_along(ids), breaks = n_chunks, labels = FALSE))
+    return(lapply(idx, function(i) ids[i]))
+  }
+
+  if (method == "chunk_size") {
+    chunk_size <- as.integer(chunk$chunk_size)
+    if (is.na(chunk_size) || chunk_size < 1) stop("chunk$chunk_size must be >= 1.")
+    out <- list()
+    for (i in seq(1, length(ids), by = chunk_size)) {
+      out[[length(out) + 1L]] <- ids[i:min(i + chunk_size - 1L, length(ids))]
+    }
+    return(out)
+  }
+
+  if (method == "pct") {
+    pct <- as.numeric(chunk$pct)
+    if (is.na(pct) || pct <= 0 || pct > 1) stop("chunk$pct must be in (0, 1].")
+    chunk_size <- max(1L, as.integer(ceiling(length(ids) * pct)))
+    out <- list()
+    for (i in seq(1, length(ids), by = chunk_size)) {
+      out[[length(out) + 1L]] <- ids[i:min(i + chunk_size - 1L, length(ids))]
+    }
+    return(out)
+  }
+
+  stop("Unknown chunking method. Use 'none', 'n_chunks', 'chunk_size', or 'pct'.")
+}
+
+ps_hash_spec <- function(spec) {
+  raw <- serialize(spec, NULL, ascii = FALSE, version = 2)
+  digest::digest(raw, algo = "sha256")
+}
+
+ps_write_metadata <- function(meta, path) {
+  txt <- jsonlite::toJSON(meta, auto_unbox = TRUE, pretty = TRUE, null = "null")
+  writeLines(txt, con = path, useBytes = TRUE)
+}
+
+ps_write_dataset <- function(data, path, format, compress = TRUE) {
+  if (format == "rds") {
+    saveRDS(data, path)
+    return(invisible(path))
+  }
+  if (format == "qs") {
+    if (!requireNamespace("qs", quietly = TRUE)) stop("Package 'qs' required for format='qs' (Suggests).")
+    qs::qsave(data, path, preset = if (compress) "high" else "fast")
+    return(invisible(path))
+  }
+  if (format == "csv") {
+    if (isTRUE(compress) || grepl("\\.gz$", path)) {
+      con <- gzfile(path, open = "wt")
+      on.exit(close(con), add = TRUE)
+      utils::write.csv(data, con, row.names = FALSE)
+    } else {
+      utils::write.csv(data, path, row.names = FALSE)
+    }
+    return(invisible(path))
+  }
+  if (format == "parquet") {
+    if (!requireNamespace("arrow", quietly = TRUE)) stop("Package 'arrow' required for format='parquet' (Suggests).")
+    arrow::write_parquet(data, sink = path)
+    return(invisible(path))
+  }
+  stop("Unknown format.")
+}
