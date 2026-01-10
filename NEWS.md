@@ -1,3 +1,9 @@
+## 1.3.0
+
+- Coordinated ecosystem release v1.3.0 (promoting `patientSimPrepare` into the coordinated version line).
+- Docs: Phase 7 vignette/user guide hardened (prose-first; no semantic changes).
+- Dataset construction semantics from v0.8.x remain locked; this release is version alignment + documentation.
+
 ## patientSimPrepare 0.8.2
 
 ## 0.8.4
