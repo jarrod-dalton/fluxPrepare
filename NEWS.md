@@ -1,5 +1,9 @@
 ## patientSimPrepare 0.8.2
 
+## 0.8.3
+
+- Add LICENSE file to align repository structure with ecosystem standards.
+
 - Fix follow-up calendar time coercion in `ps_build_ttv_event()` (pass compiled Core time spec to internal coercion).
 - Update calendar follow-up unit test to use the current `ps_prepare_observations()` interface.
 
