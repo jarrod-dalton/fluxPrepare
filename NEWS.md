@@ -1,5 +1,9 @@
 ## patientSimPrepare 0.8.2
 
+## 0.8.4
+
+- Docs: rewrite `docs/vignette.md` into a prose-first orientation document (Phase 7), clarifying the observation vs state distinction, one-step interval semantics (`t0 -> t1` with explicit `deltat`), reconstruction guardrails/provenance, and how Prepare fits with Core and Validation.
+
 ## 0.8.3
 
 - Add LICENSE file to align repository structure with ecosystem standards.
