@@ -1,11 +1,11 @@
-test_that("ps_build_ttv_state converts followup Date times using ctx$time", {
-  splits <- ps_prepare_splits(
+test_that("build_ttv_state converts followup Date times using ctx$time", {
+  splits <- prepare_splits(
     data.frame(pid = c("a","b"), split = c("train","test")),
     id_col = "pid", split_col = "split"
   )
 
   # Two observations per patient so we form at least one interval.
-  obs <- ps_prepare_observations(
+  obs <- prepare_observations(
     tables = list(
       labs = data.frame(
         pid = c("a","a","b","b"),
@@ -29,7 +29,7 @@ test_that("ps_build_ttv_state converts followup Date times using ctx$time", {
 
   ctx <- list(time = list(unit = "days", zone = "UTC"))
 
-  out <- ps_build_ttv_state(
+  out <- build_ttv_state(
     observations = obs,
     splits = splits,
     ctx = ctx,

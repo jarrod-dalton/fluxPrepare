@@ -34,9 +34,9 @@ Implementation is tracked in `NEWS.md` and guarded by unit tests:
 library(patientSimPrepare)
 
 # 1) Canonicalize inputs
-splits <- ps_prepare_splits(splits)
-events  <- ps_prepare_events(events)
-obs     <- ps_prepare_observations(obs)
+splits <- prepare_splits(splits)
+events  <- prepare_events(events)
+obs     <- prepare_observations(obs)
 
 # 2) Event-model intervals
 spec_event <- list(

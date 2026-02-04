@@ -1,4 +1,4 @@
-test_that("ps_build_ttv_batch writes datasets + manifest (rds)", {
+test_that("build_ttv_batch writes datasets + manifest (rds)", {
   skip_if_not_installed("digest")
   skip_if_not_installed("jsonlite")
 
@@ -10,7 +10,7 @@ test_that("ps_build_ttv_batch writes datasets + manifest (rds)", {
     split = c("train", "test"),
     stringsAsFactors = FALSE
   )
-  splits <- ps_prepare_splits(splits)
+  splits <- prepare_splits(splits)
 
   obs_tbl <- data.frame(
     patient_id = c("p1", "p1", "p2", "p2"),
@@ -18,7 +18,7 @@ test_that("ps_build_ttv_batch writes datasets + manifest (rds)", {
     sbp = c(120, 130, 110, 115),
     stringsAsFactors = FALSE
   )
-  observations <- ps_prepare_observations(
+  observations <- prepare_observations(
     tables = list(bp = obs_tbl),
     specs = list(bp = list(id_col = "patient_id", time_col = "time", vars = c("sbp"), group = "bp"))
   )
@@ -27,7 +27,7 @@ test_that("ps_build_ttv_batch writes datasets + manifest (rds)", {
     sbp = list(type = "continuous", default = NA_real_)
   )
 
-  spec1 <- ps_spec_state(
+  spec1 <- spec_state(
     schema = schema,
     name = "bp_sbp",
     outcome_group = "bp",
@@ -38,7 +38,7 @@ test_that("ps_build_ttv_batch writes datasets + manifest (rds)", {
     keep_provenance = FALSE
   )
 
-  man <- ps_build_ttv_batch(
+  man <- build_ttv_batch(
     specs = list(spec1),
     splits = splits,
     observations = observations,

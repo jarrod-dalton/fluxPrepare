@@ -1,4 +1,4 @@
-test_that("Phase 6: ps_reconstruct_state_at can add Core-derived variables at anchors", {
+test_that("Phase 6: reconstruct_state_at can add Core-derived variables at anchors", {
   # Build canonical observations
   obs <- data.frame(
     patient_id = c("p1","p1","p1","p2"),
@@ -23,9 +23,9 @@ test_that("Phase 6: ps_reconstruct_state_at can add Core-derived variables at an
     n_sbp_12 = patientSimCore::derive("n_sbp_12", target = patientSimCore::var("sbp"), lookback_t = 12, fn = "count", include_current = FALSE, force = FALSE)
   )
 
-  provider <- ps_core_derived_provider(schema = schema, derived_var_fns = derived_fns)
+  provider <- core_derived_provider(schema = schema, derived_var_fns = derived_fns)
 
-  out <- ps_reconstruct_state_at(
+  out <- reconstruct_state_at(
     anchors = anchors,
     observations = obs,
     vars = c("sbp"),

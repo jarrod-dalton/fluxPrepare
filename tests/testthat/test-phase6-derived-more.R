@@ -48,9 +48,9 @@ test_that("Phase 6: include_current toggles whether anchor-time observations are
     )
   )
 
-  provider <- ps_core_derived_provider(schema = schema, derived_var_fns = derived_fns)
+  provider <- core_derived_provider(schema = schema, derived_var_fns = derived_fns)
 
-  out <- ps_reconstruct_state_at(
+  out <- reconstruct_state_at(
     anchors = anchors,
     observations = obs,
     vars = c("sbp"),
@@ -98,9 +98,9 @@ test_that("Phase 6: multiple anchors for same patient do not leak state across a
     )
   )
 
-  provider <- ps_core_derived_provider(schema = schema, derived_var_fns = derived_fns)
+  provider <- core_derived_provider(schema = schema, derived_var_fns = derived_fns)
 
-  out <- ps_reconstruct_state_at(
+  out <- reconstruct_state_at(
     anchors = anchors,
     observations = obs,
     vars = c("sbp"),
@@ -147,10 +147,10 @@ test_that("Phase 6: derived_on_missing='error' fails if a derived value is missi
     )
   )
 
-  provider <- ps_core_derived_provider(schema = schema, derived_var_fns = derived_fns)
+  provider <- core_derived_provider(schema = schema, derived_var_fns = derived_fns)
 
   expect_error(
-    ps_reconstruct_state_at(
+    reconstruct_state_at(
       anchors = anchors,
       observations = obs,
       vars = c("sbp"),

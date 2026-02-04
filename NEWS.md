@@ -1,3 +1,26 @@
+## patientSimPrepare 1.3.5
+
+- Bugfix: `segment_bins()` now permits `-Inf`/`Inf` endpoints (e.g., `c(-Inf, 160, Inf)`) while still requiring strictly increasing cutpoints.
+
+## patientSimPrepare 1.3.4
+
+- API: removed the `ps_` prefix from the user-facing function names (e.g., `prepare_events()`, `build_ttv_state()`, `spec_event_process()`), reflecting that Prepare is intended for broad use by EHR analysts.
+- Event-process time segmentation: `spec_event_process()` gains `candidate_times` to control candidate interval boundaries (`"groups"`, `"vars"`, or `"groups_or_vars"`).
+- New helpers: `segment_bins()`, `segment_eps()`, `segment_rel_eps()`, `segment_flip()`, and `segment_rules_combine()` make segmentation rules easier to write and reuse.
+
+## patientSimPrepare 1.3.3
+
+- Bugfix: event-process time segmentation now initializes baseline covariate values from the first observed measurement after t0 (when t0 precedes measurement history), ensuring meaningful-change rules (e.g., bin crossings) can create interval boundaries as intended.
+
+## patientSimPrepare 1.3.2
+
+- Event-process TTV construction: added optional time-segmentation rules based on "meaningful change" in specified covariates (e.g., bin crossings, tolerance thresholds, boolean flips), to avoid over-fragmenting slow-process risk intervals when frequent measurements change only trivially.
+- Bugfix: `ps_reconstruct_state_at()` now accepts an optional `ctx` argument for Date/POSIXt time handling.
+
+## patientSimPrepare 1.3.1
+
+- Added `ps_spec_event_process()` and `ps_build_ttv_event_process()` to construct start-stop TTV datasets for cause-specific hazard and parametric competing-risk event models, with optional capped-frequency splitting via `min_dt`.
+
 ## 1.3.0
 
 - Coordinated ecosystem release v1.3.0 (promoting `patientSimPrepare` into the coordinated version line).
@@ -15,7 +38,7 @@
 - Add LICENSE file to align repository structure with ecosystem standards.
 
 - Fix follow-up calendar time coercion in `ps_build_ttv_event()` (pass compiled Core time spec to internal coercion).
-- Update calendar follow-up unit test to use the current `ps_prepare_observations()` interface.
+- Update calendar follow-up unit test to use the current `prepare_observations()` interface.
 
 ## patientSimPrepare 0.8.0
 
@@ -34,7 +57,7 @@
 ## patientSimPrepare 0.7.12
 
 - Phase 1 prep functions now support `Date`/`POSIXct` time columns when `ctx$time$unit/origin/zone` is provided, converting calendar time to numeric model time via `patientSimCore` time helpers.
-- `ps_prepare_events()` and `ps_prepare_observations()` gained a `ctx` argument (required when time columns are `Date`/`POSIXct`).
+- `prepare_events()` and `prepare_observations()` gained a `ctx` argument (required when time columns are `Date`/`POSIXct`).
 - Added unit tests to lock in calendar-time conversion behavior and associated error modes.
 
 ## patientSimPrepare 0.7.11
@@ -61,4 +84,3 @@
 
 - Chore: promote Phase 6 derived-variable integration to a first-class capability by requiring `patientSimCore (>= 1.2.1)` (moved from Suggests to Imports). Phase 6 tests now run unconditionally.
 - Docs: add `README.md` and an initial Phase 7 vignette (`docs/vignette.md`) describing the end-to-end dataset construction workflow (code blocks use `eval=FALSE`).
-

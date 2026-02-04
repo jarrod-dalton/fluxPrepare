@@ -5,16 +5,17 @@
 #' staleness constraints.
 #'
 #' @param anchors A data.frame with patient id and anchor time.
-#' @param observations Canonical observation store (e.g., from ps_prepare_observations()).
+#' @param observations Canonical observation store (e.g., from prepare_observations()).
 #' @param vars Character vector of variable names to reconstruct.
 #' @param id_col Patient id column in `anchors`.
 #' @param time_col Anchor time column in `anchors`.
 #' @param lookback Numeric lookback window; only observations with time >= t0 - lookback are eligible.
 #' @param staleness Numeric maximum age; single value or named vector with per-variable values.
 #' @param keep_provenance If TRUE, add per-variable `.time_<var>` and `.prov_<var>` columns.
+#' @param ctx Optional patientSimCore context, used only when anchor/observation times are Date/POSIXt.
 #' @return A data.frame with columns patient_id, t0, reconstructed vars, and optional provenance.
 #' @export
-ps_reconstruct_state_at <- function(anchors,
+reconstruct_state_at <- function(anchors,
                                    observations,
                                    vars,
                                    id_col = "patient_id",
@@ -29,46 +30,47 @@ ps_reconstruct_state_at <- function(anchors,
                                    derived_on_missing = c("na", "error"),
                                    keep_derived_provenance = FALSE,
                                    count_no_history = c("na", "zero"),
-                                   count_vars = NULL) {
+                                   count_vars = NULL,
+                                   ctx = NULL) {
   .ps_assert_data_frame(anchors, "anchors")
   .ps_assert_data_frame(observations, "observations")
   .ps_assert_has_cols(anchors, c(id_col, time_col), "anchors")
   .ps_assert_has_cols(observations, c("patient_id", "time"), "observations")
 
   if (!is.character(vars) || length(vars) < 1L) {
-    stop("ps_reconstruct_state_at(): `vars` must be a non-empty character vector.", call. = FALSE)
+    stop("reconstruct_state_at(): `vars` must be a non-empty character vector.", call. = FALSE)
   }
   .ps_assert_has_cols(observations, vars, "observations")
 
   a <- anchors[, c(id_col, time_col)]
   names(a) <- c("patient_id", "t0")
   a$patient_id <- as.character(a$patient_id)
-    time_spec <- NULL
+  time_spec <- NULL
   if (inherits(a$t0, "Date") || inherits(a$t0, "POSIXt")) {
-    time_spec <- .ps_time_spec_or_stop(ctx, "ps_reconstruct_state_at")
+    time_spec <- .ps_time_spec_or_stop(ctx, "reconstruct_state_at")
   }
   a$t0 <- .ps_coerce_time_numeric(a$t0, time_spec, "anchors$t0")
   .ps_assert_time_numeric(a$t0, "anchors$t0")
 
   if (anyNA(a$patient_id) || any(a$patient_id == "")) {
-    stop("ps_reconstruct_state_at(): anchors patient_id contains missing/empty values.", call. = FALSE)
+    stop("reconstruct_state_at(): anchors patient_id contains missing/empty values.", call. = FALSE)
   }
 
   obs <- observations
   obs$patient_id <- as.character(obs$patient_id)
-    # observations should already be numeric from ps_prepare_observations(),
+    # observations should already be numeric from prepare_observations(),
   # but allow Date/POSIXct here when ctx is provided.
   if (is.null(time_spec) && (inherits(obs$time, "Date") || inherits(obs$time, "POSIXt"))) {
-    time_spec <- .ps_time_spec_or_stop(ctx, "ps_reconstruct_state_at")
+    time_spec <- .ps_time_spec_or_stop(ctx, "reconstruct_state_at")
   }
   obs$time <- .ps_coerce_time_numeric(obs$time, time_spec, "observations$time")
   .ps_assert_time_numeric(obs$time, "observations$time")
 
   if (!is.numeric(lookback) || length(lookback) != 1L) {
-    stop("ps_reconstruct_state_at(): `lookback` must be a single numeric value.", call. = FALSE)
+    stop("reconstruct_state_at(): `lookback` must be a single numeric value.", call. = FALSE)
   }
   if (is.finite(lookback) && lookback < 0) {
-    stop("ps_reconstruct_state_at(): `lookback` must be >= 0.", call. = FALSE)
+    stop("reconstruct_state_at(): `lookback` must be >= 0.", call. = FALSE)
   }
 
   stal <- .ps_norm_named_numeric(staleness, vars, "staleness")
@@ -129,22 +131,22 @@ ps_reconstruct_state_at <- function(anchors,
 
   if (!is.null(derived_vars)) {
     if (!is.character(derived_vars) || length(derived_vars) < 1L) {
-      stop("ps_reconstruct_state_at(): derived_vars must be NULL or a non-empty character vector.", call. = FALSE)
+      stop("reconstruct_state_at(): derived_vars must be NULL or a non-empty character vector.", call. = FALSE)
     }
     derived_vars <- unique(as.character(derived_vars))
     if (is.null(derived_provider)) {
-      stop("ps_reconstruct_state_at(): derived_provider must be provided when derived_vars is not NULL.", call. = FALSE)
+      stop("reconstruct_state_at(): derived_provider must be provided when derived_vars is not NULL.", call. = FALSE)
     }
     if (is.null(derived_context)) {
       derived_context <- list(observations = observations)
     } else {
-      if (!is.list(derived_context)) stop("ps_reconstruct_state_at(): derived_context must be NULL or a list.", call. = FALSE)
+      if (!is.list(derived_context)) stop("reconstruct_state_at(): derived_context must be NULL or a list.", call. = FALSE)
       if (is.null(derived_context$observations)) derived_context$observations <- observations
     }
   }
   # Phase 6: optionally add derived variables at anchors via provider (Core re-use).
   if (!is.null(derived_vars)) {
-    out <- ps_add_derived_at(
+    out <- add_derived_at(
       state_at = out,
       anchors = out[, c("patient_id", "t0"), drop = FALSE],
       derived_vars = derived_vars,
@@ -177,21 +179,21 @@ ps_reconstruct_state_at <- function(anchors,
     return(stats::setNames(rep(Inf, length(vars)), vars))
   }
   if (is.numeric(x) && length(x) == 1L) {
-    if (is.na(x) || x < 0) stop(sprintf("ps_reconstruct_state_at(): `%s` must be >= 0 or Inf.", context), call. = FALSE)
+    if (is.na(x) || x < 0) stop(sprintf("reconstruct_state_at(): `%s` must be >= 0 or Inf.", context), call. = FALSE)
     return(stats::setNames(rep(as.numeric(x), length(vars)), vars))
   }
   if (is.numeric(x) && !is.null(names(x)) && all(names(x) != "")) {
     miss <- setdiff(vars, names(x))
     if (length(miss) > 0) {
-      stop(sprintf("ps_reconstruct_state_at(): `%s` missing entries for vars: %s", context, paste0(miss, collapse = ", ")),
+      stop(sprintf("reconstruct_state_at(): `%s` missing entries for vars: %s", context, paste0(miss, collapse = ", ")),
            call. = FALSE)
     }
     bad <- is.na(x[vars]) | x[vars] < 0
     if (any(bad)) {
-      stop(sprintf("ps_reconstruct_state_at(): `%s` contains NA/negative values.", context), call. = FALSE)
+      stop(sprintf("reconstruct_state_at(): `%s` contains NA/negative values.", context), call. = FALSE)
     }
     return(stats::setNames(as.numeric(x[vars]), vars))
   }
-  stop(sprintf("ps_reconstruct_state_at(): `%s` must be a single numeric value or a named numeric vector.", context),
+  stop(sprintf("reconstruct_state_at(): `%s` must be a single numeric value or a named numeric vector.", context),
        call. = FALSE)
 }

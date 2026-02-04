@@ -1,8 +1,8 @@
-\name{ps_prepare_events}
-\alias{ps_prepare_events}
+\name{prepare_events}
+\alias{prepare_events}
 \title{Prepare a canonical event stream}
 \usage{
-ps_prepare_events(events,
+prepare_events(events,
   id_col = "patient_id",
   time_col = "time",
   type_col = "event_type",
@@ -20,4 +20,4 @@ ps_prepare_events(events,
   \item{sort}{Logical; if TRUE, sort events within patient by time (then event_type).}
 }
 \value{A data.frame with columns: \code{patient_id}, \code{time}, \code{event_type}, and \code{source_table}.}
-\description{\code{ps_prepare_events()} normalizes one or more raw event tables into a single canonical event stream for downstream phases. Calendar time inputs are converted to numeric model time using \code{patientSimCore::ps_time_to_model()} when \code{ctx} is provided.}
+\description{\code{prepare_events()} normalizes one or more raw event tables into a single canonical event stream for downstream phases. Calendar time inputs are converted to numeric model time using \code{patientSimCore::ps_time_to_model()} when \code{ctx} is provided.}

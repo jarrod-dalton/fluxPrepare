@@ -9,7 +9,7 @@
 #' @param allowed Character vector of allowed split labels (case-insensitive).
 #' @return A data.frame with columns: patient_id, split.
 #' @export
-ps_prepare_splits <- function(df,
+prepare_splits <- function(df,
                              id_col = "patient_id",
                              split_col = "split",
                              allowed = c("train", "test", "validation")) {
@@ -26,19 +26,19 @@ ps_prepare_splits <- function(df,
   bad <- !(out$split %in% allowed_norm) | is.na(out$split) | out$split == ""
   if (any(bad)) {
     bad_vals <- unique(out$split[bad])
-    stop(sprintf("ps_prepare_splits(): invalid split values: %s",
+    stop(sprintf("prepare_splits(): invalid split values: %s",
                  paste0(bad_vals, collapse = ", ")), call. = FALSE)
   }
 
   if (anyNA(out$patient_id) || any(out$patient_id == "")) {
-    stop("ps_prepare_splits(): patient_id contains missing/empty values.", call. = FALSE)
+    stop("prepare_splits(): patient_id contains missing/empty values.", call. = FALSE)
   }
 
   # Enforce uniqueness: one split per patient_id
   dup <- duplicated(out$patient_id)
   if (any(dup)) {
     dups <- unique(out$patient_id[dup])
-    stop(sprintf("ps_prepare_splits(): patient_id has multiple rows (must be unique). Example(s): %s",
+    stop(sprintf("prepare_splits(): patient_id has multiple rows (must be unique). Example(s): %s",
                  paste0(head(dups, 10), collapse = ", ")), call. = FALSE)
   }
 
@@ -62,7 +62,7 @@ ps_prepare_splits <- function(df,
 #' @param sort Logical; if TRUE, sort events within patient by time (then event_type).
 #' @return A data.frame with columns: patient_id, time, event_type, source_table.
 #' @export
-ps_prepare_events <- function(events,
+prepare_events <- function(events,
                              id_col = "patient_id",
                              time_col = "time",
                              type_col = "event_type",
@@ -76,7 +76,7 @@ ps_prepare_events <- function(events,
     ev$source_table <- NA_character_
   } else if (is.list(events) && length(events) > 0 && all(vapply(events, is.data.frame, logical(1)))) {
     if (is.null(names(events)) || any(names(events) == "")) {
-      stop("ps_prepare_events(): when events is a list, it must be a *named* list.", call. = FALSE)
+      stop("prepare_events(): when events is a list, it must be a *named* list.", call. = FALSE)
     }
 
     ev_list <- vector("list", length(events))
@@ -85,7 +85,7 @@ ps_prepare_events <- function(events,
     # Determine event_type per table
     if (!is.null(table_event_type)) {
       if (is.null(names(table_event_type)) || any(names(table_event_type) == "")) {
-        stop("ps_prepare_events(): table_event_type must be a named character vector.", call. = FALSE)
+        stop("prepare_events(): table_event_type must be a named character vector.", call. = FALSE)
       }
     }
 
@@ -106,7 +106,7 @@ ps_prepare_events <- function(events,
 
     ev <- do.call(rbind, ev_list)
   } else {
-    stop("ps_prepare_events(): `events` must be a data.frame or a named list of data.frames.", call. = FALSE)
+    stop("prepare_events(): `events` must be a data.frame or a named list of data.frames.", call. = FALSE)
   }
 
   ev$patient_id <- as.character(ev$patient_id)
@@ -117,20 +117,20 @@ time_class <- class(ev$time)[1]
 time_spec <- NULL
 
 if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
-  time_spec <- .ps_time_spec_or_stop(ctx, "ps_prepare_events")
+  time_spec <- .ps_time_spec_or_stop(ctx, "prepare_events")
   ev$time <- patientSimCore::ps_time_to_model(ev$time, time_spec)
 } else {
   ev$time <- .ps_coerce_time_numeric(ev$time)
 }
 
   if (anyNA(ev$patient_id) || any(ev$patient_id == "")) {
-    stop("ps_prepare_events(): patient_id contains missing/empty values.", call. = FALSE)
+    stop("prepare_events(): patient_id contains missing/empty values.", call. = FALSE)
   }
   if (anyNA(ev$time)) {
-    stop("ps_prepare_events(): time contains missing values after coercion.", call. = FALSE)
+    stop("prepare_events(): time contains missing values after coercion.", call. = FALSE)
   }
   if (anyNA(ev$event_type) || any(ev$event_type == "")) {
-    stop("ps_prepare_events(): event_type contains missing/empty values.", call. = FALSE)
+    stop("prepare_events(): event_type contains missing/empty values.", call. = FALSE)
   }
 
   if (isTRUE(sort)) {
@@ -156,28 +156,28 @@ if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
 #' @param sort Logical; if TRUE, sort observations within patient by time (then group).
 #' @return A data.frame with at least: patient_id, time, group, (vars...), source_table (optional).
 #' @export
-ps_prepare_observations <- function(tables,
+prepare_observations <- function(tables,
                                    specs,
                                    keep_source = TRUE,
                                    ctx = NULL,
                                    sort = TRUE) {
   if (!(is.list(tables) && length(tables) > 0 && all(vapply(tables, is.data.frame, logical(1))))) {
-    stop("ps_prepare_observations(): `tables` must be a named list of data.frames.", call. = FALSE)
+    stop("prepare_observations(): `tables` must be a named list of data.frames.", call. = FALSE)
   }
   if (is.null(names(tables)) || any(names(tables) == "")) {
-    stop("ps_prepare_observations(): `tables` must be a *named* list.", call. = FALSE)
+    stop("prepare_observations(): `tables` must be a *named* list.", call. = FALSE)
   }
   if (!(is.list(specs) && length(specs) > 0)) {
-    stop("ps_prepare_observations(): `specs` must be a named list.", call. = FALSE)
+    stop("prepare_observations(): `specs` must be a named list.", call. = FALSE)
   }
   if (is.null(names(specs)) || any(names(specs) == "")) {
-    stop("ps_prepare_observations(): `specs` must be a *named* list keyed by table name.", call. = FALSE)
+    stop("prepare_observations(): `specs` must be a *named* list keyed by table name.", call. = FALSE)
   }
 
   tbl_names <- names(tables)
   missing_specs <- setdiff(tbl_names, names(specs))
   if (length(missing_specs) > 0) {
-    stop(sprintf("ps_prepare_observations(): missing specs for table(s): %s",
+    stop(sprintf("prepare_observations(): missing specs for table(s): %s",
                  paste0(missing_specs, collapse = ", ")), call. = FALSE)
   }
 
@@ -191,11 +191,11 @@ ps_prepare_observations <- function(tables,
     sp <- specs[[nm]]
 
     if (!is.list(sp)) {
-      stop(sprintf("ps_prepare_observations(): specs[['%s']] must be a list.", nm), call. = FALSE)
+      stop(sprintf("prepare_observations(): specs[['%s']] must be a list.", nm), call. = FALSE)
     }
     req <- c("id_col", "time_col", "vars")
     if (!all(req %in% names(sp))) {
-      stop(sprintf("ps_prepare_observations(): specs[['%s']] must contain fields: %s",
+      stop(sprintf("prepare_observations(): specs[['%s']] must contain fields: %s",
                    nm, paste0(req, collapse = ", ")), call. = FALSE)
     }
 
@@ -205,7 +205,7 @@ ps_prepare_observations <- function(tables,
     group <- if (!is.null(sp$group)) as.character(sp$group) else nm
 
     if (!is.character(vars) || length(vars) < 1) {
-      stop(sprintf("ps_prepare_observations(): specs[['%s']]$vars must be a non-empty character vector.", nm),
+      stop(sprintf("prepare_observations(): specs[['%s']]$vars must be a non-empty character vector.", nm),
            call. = FALSE)
     }
 
@@ -218,7 +218,7 @@ ps_prepare_observations <- function(tables,
     tmp$patient_id <- as.character(tmp$patient_id)
     time_classes[[i]] <- class(tmp$time)[1]
     if (inherits(tmp$time, "Date") || inherits(tmp$time, "POSIXt")) {
-      if (is.null(time_spec)) time_spec <- .ps_time_spec_or_stop(ctx, "ps_prepare_observations")
+      if (is.null(time_spec)) time_spec <- .ps_time_spec_or_stop(ctx, "prepare_observations")
       tmp$time <- patientSimCore::ps_time_to_model(tmp$time, time_spec)
     } else {
       tmp$time <- .ps_coerce_time_numeric(tmp$time)
@@ -253,13 +253,13 @@ ps_prepare_observations <- function(tables,
 
 
   if (anyNA(out$patient_id) || any(out$patient_id == "")) {
-    stop("ps_prepare_observations(): patient_id contains missing/empty values.", call. = FALSE)
+    stop("prepare_observations(): patient_id contains missing/empty values.", call. = FALSE)
   }
   if (anyNA(out$time)) {
-    stop("ps_prepare_observations(): time contains missing values after coercion.", call. = FALSE)
+    stop("prepare_observations(): time contains missing values after coercion.", call. = FALSE)
   }
   if (anyNA(out$group) || any(out$group == "")) {
-    stop("ps_prepare_observations(): group contains missing/empty values.", call. = FALSE)
+    stop("prepare_observations(): group contains missing/empty values.", call. = FALSE)
   }
 
   if (isTRUE(sort)) {

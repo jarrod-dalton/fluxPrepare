@@ -85,7 +85,7 @@ raw_splits <- data.frame(
   split = c("train", "test", "validation")
 )
 
-splits <- ps_prepare_splits(
+splits <- prepare_splits(
   raw_splits,
   id_col    = "pid",
   split_col = "split"
@@ -104,7 +104,7 @@ raw_events <- data.frame(
   type = c("visit", "mi", "visit")
 )
 
-events <- ps_prepare_events(
+events <- prepare_events(
   raw_events,
   id_col   = "pid",
   time_col = "when",
@@ -128,7 +128,7 @@ raw_labs <- data.frame(
   sbp   = c(120, 130, 110, 115)
 )
 
-observations <- ps_prepare_observations(
+observations <- prepare_observations(
   list(labs = raw_labs),
   id_col    = "pid",
   time_col  = "when",

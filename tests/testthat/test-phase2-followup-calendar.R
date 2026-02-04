@@ -1,10 +1,10 @@
-test_that("ps_build_ttv_event converts followup Date times using ctx$time", {
-  splits <- ps_prepare_splits(
+test_that("build_ttv_event converts followup Date times using ctx$time", {
+  splits <- prepare_splits(
     data.frame(pid = c("a","b"), split = c("train","test")),
     id_col = "pid", split_col = "split"
   )
 
-  ev <- ps_prepare_events(
+  ev <- prepare_events(
     data.frame(pid = c("a","a","b"), t = c(1,5,2), type = c("visit","mi","visit")),
     id_col = "pid", time_col = "t", type_col = "type", sort = FALSE
   )
@@ -18,7 +18,7 @@ test_that("ps_build_ttv_event converts followup Date times using ctx$time", {
 
   ctx <- list(time = list(unit = "days", zone = "UTC"))
 
-  out <- ps_build_ttv_event(
+  out <- build_ttv_event(
     ev, splits,
     ctx = ctx,
     event_type = "mi",

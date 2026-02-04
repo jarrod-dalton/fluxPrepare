@@ -4,8 +4,8 @@
 \description{Construct interval-based TTV datasets for predicting state variables at the end of an interval, conditional on predictors at the start.}
 \usage{ps_build_ttv_state(observations, splits, ctx = NULL, outcome_group, outcome_vars, predictor_vars, followup = NULL, fu_start_col = "followup_start", fu_end_col = "followup_end", death_col = NULL, lookback = Inf, staleness = Inf, keep_provenance = TRUE, row_policy = c("return_all", "drop_incomplete"), derived_vars = NULL, derived_provider = NULL, derived_context = NULL, derived_on_missing = c("na", "error"), keep_derived_provenance = FALSE, count_no_history = c("na", "zero"), count_vars = NULL, max_intervals_per_patient = NULL, seed = NULL)}
 \arguments{
-\item{observations}{Canonical observation store from \code{ps_prepare_observations()}.}
-\item{splits}{Canonical split table from \code{ps_prepare_splits()}.}
+\item{observations}{Canonical observation store from \code{prepare_observations()}.}
+\item{splits}{Canonical split table from \code{prepare_splits()}.}
 \item{ctx}{Optional context list. If provided, calendar-time columns in \code{followup} (Date/POSIXct) are converted to numeric model time using \code{ctx$time$unit/origin/zone}.}
 \item{outcome_group}{Observation group used to define consecutive anchor intervals.}
 \item{outcome_vars}{Outcome variable names (evaluated at interval end).}

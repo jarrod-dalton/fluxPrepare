@@ -1,8 +1,8 @@
-\name{ps_prepare_observations}
-\alias{ps_prepare_observations}
+\name{prepare_observations}
+\alias{prepare_observations}
 \title{Prepare a canonical long-format observation table}
 \usage{
-ps_prepare_observations(tables,
+prepare_observations(tables,
   specs,
   keep_source = TRUE,
   ctx = NULL,
@@ -16,4 +16,4 @@ ps_prepare_observations(tables,
   \item{sort}{Logical; if TRUE, sort observations within patient by time (then group).}
 }
 \value{A data.frame with at least: \code{patient_id}, \code{time}, \code{group}, declared variable columns, and optional provenance columns.}
-\description{\code{ps_prepare_observations()} binds one or more raw measurement tables into a single long-format observation table, with unified columns and time handling for downstream phases. Calendar time inputs are converted to numeric model time using \code{patientSimCore::ps_time_to_model()} when \code{ctx} is provided.}
+\description{\code{prepare_observations()} binds one or more raw measurement tables into a single long-format observation table, with unified columns and time handling for downstream phases. Calendar time inputs are converted to numeric model time using \code{patientSimCore::ps_time_to_model()} when \code{ctx} is provided.}

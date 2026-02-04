@@ -1,11 +1,11 @@
-test_that("ps_build_ttv_event builds one-step intervals with censoring", {
-  splits <- ps_prepare_splits(
+test_that("build_ttv_event builds one-step intervals with censoring", {
+  splits <- prepare_splits(
     data.frame(pid = c("a","b"), split = c("train","test")),
     id_col = "pid", split_col = "split"
   )
 
   # Patient a has target event at t=5; patient b does not
-  ev <- ps_prepare_events(
+  ev <- prepare_events(
     data.frame(pid = c("a","a","b"), t = c(1,5,2), type = c("visit","mi","visit")),
     id_col = "pid", time_col = "t", type_col = "type"
   )
@@ -16,7 +16,7 @@ test_that("ps_build_ttv_event builds one-step intervals with censoring", {
     followup_end = c(10,10)
   )
 
-  out <- ps_build_ttv_event(
+  out <- build_ttv_event(
     events = ev,
     splits = splits,
     event_type = "mi",
@@ -33,19 +33,19 @@ test_that("ps_build_ttv_event builds one-step intervals with censoring", {
   expect_equal(out$deltat, c(5,10))
 })
 
-test_that("ps_build_ttv_event errors when followup missing patients", {
-  splits <- ps_prepare_splits(
+test_that("build_ttv_event errors when followup missing patients", {
+  splits <- prepare_splits(
     data.frame(pid = c("a","b"), split = c("train","test")),
     id_col = "pid", split_col = "split"
   )
-  ev <- ps_prepare_events(
+  ev <- prepare_events(
     data.frame(pid = c("a","b"), t = c(1,2), type = c("mi","mi")),
     id_col = "pid", time_col = "t", type_col = "type"
   )
 
   followup <- data.frame(patient_id = "a", followup_start = 0, followup_end = 10)
   expect_error(
-    ps_build_ttv_event(ev, splits, event_type = "mi", followup = followup),
+    build_ttv_event(ev, splits, event_type = "mi", followup = followup),
     "missing"
   )
 })

@@ -12,20 +12,20 @@
 #' @param derived_var_fns Named list of derived variable functions compatible with patientSimCore.
 #' @return A provider object (list) with a `$compute()` method.
 #' @export
-ps_core_derived_provider <- function(schema, derived_var_fns) {
+core_derived_provider <- function(schema, derived_var_fns) {
   if (!is.list(schema) || is.null(names(schema))) {
-    stop("ps_core_derived_provider(): `schema` must be a named list (patientSimCore schema).", call. = FALSE)
+    stop("core_derived_provider(): `schema` must be a named list (patientSimCore schema).", call. = FALSE)
   }
   if (!is.list(derived_var_fns) || length(derived_var_fns) == 0L) {
-    stop("ps_core_derived_provider(): `derived_var_fns` must be a non-empty named list of functions.", call. = FALSE)
+    stop("core_derived_provider(): `derived_var_fns` must be a non-empty named list of functions.", call. = FALSE)
   }
   nms <- names(derived_var_fns)
   if (is.null(nms) || any(nms == "")) {
-    stop("ps_core_derived_provider(): `derived_var_fns` must have non-empty names.", call. = FALSE)
+    stop("core_derived_provider(): `derived_var_fns` must have non-empty names.", call. = FALSE)
   }
   for (nm in nms) {
     if (!is.function(derived_var_fns[[nm]])) {
-      stop(sprintf("ps_core_derived_provider(): derived_var_fns[['%s']] must be a function.", nm), call. = FALSE)
+      stop(sprintf("core_derived_provider(): derived_var_fns[['%s']] must be a function.", nm), call. = FALSE)
     }
   }
 
@@ -49,7 +49,7 @@ ps_core_derived_provider <- function(schema, derived_var_fns) {
 
     # require patientSimCore at runtime (Suggests)
     if (!requireNamespace("patientSimCore", quietly = TRUE)) {
-      stop("ps_core_derived_provider requires package 'patientSimCore' to be installed.", call. = FALSE)
+      stop("core_derived_provider requires package 'patientSimCore' to be installed.", call. = FALSE)
     }
 
     obs <- context$observations
@@ -172,10 +172,10 @@ ps_core_derived_provider <- function(schema, derived_var_fns) {
 
 #' Add derived variables at anchor times
 #'
-#' @param state_at Data.frame produced by ps_reconstruct_state_at().
+#' @param state_at Data.frame produced by reconstruct_state_at().
 #' @param anchors Data.frame with patient_id and t0 (same rows as state_at).
 #' @param derived_vars Character vector of derived variable names to compute.
-#' @param provider Derived-variable provider (e.g., from ps_core_derived_provider()).
+#' @param provider Derived-variable provider (e.g., from core_derived_provider()).
 #' @param context List containing at least `observations`, and optionally `events`.
 #' @param derived_on_missing "na" (default) to fill with NA when not computable; "error" to stop.
 #' @param keep_derived_provenance If TRUE, add `.avail_<var>` columns.
@@ -183,7 +183,7 @@ ps_core_derived_provider <- function(schema, derived_var_fns) {
 #' @param count_vars Character vector of derived vars to treat as count-like (eligible for NA->0 when requested).
 #' @return state_at with derived variables appended (and optional availability flags).
 #' @export
-ps_add_derived_at <- function(state_at,
+add_derived_at <- function(state_at,
                               anchors,
                               derived_vars,
                               provider,
@@ -197,7 +197,7 @@ ps_add_derived_at <- function(state_at,
   .ps_assert_has_cols(anchors, c("patient_id", "t0"), "anchors")
 
   if (!is.character(derived_vars) || length(derived_vars) < 1L) {
-    stop("ps_add_derived_at(): derived_vars must be a non-empty character vector.", call. = FALSE)
+    stop("add_derived_at(): derived_vars must be a non-empty character vector.", call. = FALSE)
   }
   derived_vars <- unique(as.character(derived_vars))
 
@@ -205,14 +205,14 @@ ps_add_derived_at <- function(state_at,
   count_no_history <- match.arg(count_no_history)
 
   if (!is.list(provider) || is.null(provider$compute) || !is.function(provider$compute)) {
-    stop("ps_add_derived_at(): provider must be a provider object with a $compute() function.", call. = FALSE)
+    stop("add_derived_at(): provider must be a provider object with a $compute() function.", call. = FALSE)
   }
 
   if (!is.null(count_vars)) {
-    if (!is.character(count_vars)) stop("ps_add_derived_at(): count_vars must be NULL or character.", call. = FALSE)
+    if (!is.character(count_vars)) stop("add_derived_at(): count_vars must be NULL or character.", call. = FALSE)
     count_vars <- unique(as.character(count_vars))
     bad <- setdiff(count_vars, derived_vars)
-    if (length(bad) > 0L) stop("ps_add_derived_at(): count_vars must be subset of derived_vars.", call. = FALSE)
+    if (length(bad) > 0L) stop("add_derived_at(): count_vars must be subset of derived_vars.", call. = FALSE)
   }
 
   d <- provider$compute(state_at = state_at, anchors = anchors, derived_vars = derived_vars, context = context)
@@ -241,7 +241,7 @@ ps_add_derived_at <- function(state_at,
   if (derived_on_missing == "error") {
     miss_any <- vapply(derived_vars, function(v) any(is.na(d[[v]])), logical(1))
     if (any(miss_any)) {
-      stop(sprintf("ps_add_derived_at(): derived vars not computable for some rows: %s",
+      stop(sprintf("add_derived_at(): derived vars not computable for some rows: %s",
                    paste(names(miss_any)[miss_any], collapse = ", ")), call. = FALSE)
     }
   }

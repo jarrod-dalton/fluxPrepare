@@ -1,6 +1,6 @@
 
-test_that("ps_build_ttv_state builds consecutive intervals and reconstructs predictors", {
-  splits <- ps_prepare_splits(
+test_that("build_ttv_state builds consecutive intervals and reconstructs predictors", {
+  splits <- prepare_splits(
     data.frame(pid = c("a", "b"), split = c("train", "test")),
     id_col = "pid", split_col = "split"
   )
@@ -14,9 +14,9 @@ test_that("ps_build_ttv_state builds consecutive intervals and reconstructs pred
 
   tables <- list(bp = bp)
   specs <- list(bp = list(id_col = "pid", time_col = "time", vars = c("sbp", "dbp"), group = "bp"))
-  obs <- ps_prepare_observations(tables, specs)
+  obs <- prepare_observations(tables, specs)
 
-  out <- ps_build_ttv_state(
+  out <- build_ttv_state(
     observations = obs,
     splits = splits,
     outcome_group = "bp",
@@ -42,8 +42,8 @@ test_that("ps_build_ttv_state builds consecutive intervals and reconstructs pred
   expect_equal(out$sbp.1, c(130, 128, 115))
 })
 
-test_that("ps_build_ttv_state censors intervals and sets outcomes to NA", {
-  splits <- ps_prepare_splits(
+test_that("build_ttv_state censors intervals and sets outcomes to NA", {
+  splits <- prepare_splits(
     data.frame(pid = c("a"), split = c("train")),
     id_col = "pid", split_col = "split"
   )
@@ -56,11 +56,11 @@ test_that("ps_build_ttv_state censors intervals and sets outcomes to NA", {
   )
   tables <- list(bp = bp)
   specs <- list(bp = list(id_col = "pid", time_col = "time", vars = c("sbp", "dbp"), group = "bp"))
-  obs <- ps_prepare_observations(tables, specs)
+  obs <- prepare_observations(tables, specs)
 
   followup <- data.frame(patient_id = "a", followup_start = 0, followup_end = 12)
 
-  out <- ps_build_ttv_state(
+  out <- build_ttv_state(
     observations = obs,
     splits = splits,
     outcome_group = "bp",
@@ -81,8 +81,8 @@ test_that("ps_build_ttv_state censors intervals and sets outcomes to NA", {
   expect_equal(out$sbp.1[1], 130)
 })
 
-test_that("ps_build_ttv_state supports multivariate outcomes and sampling per patient", {
-  splits <- ps_prepare_splits(
+test_that("build_ttv_state supports multivariate outcomes and sampling per patient", {
+  splits <- prepare_splits(
     data.frame(pid = c("a", "b"), split = c("train", "test")),
     id_col = "pid", split_col = "split"
   )
@@ -105,9 +105,9 @@ test_that("ps_build_ttv_state supports multivariate outcomes and sampling per pa
     bp = list(id_col = "pid", time_col = "time", vars = c("sbp", "dbp"), group = "bp"),
     bmp = list(id_col = "pid", time_col = "time", vars = c("glucose", "sodium"), group = "bmp")
   )
-  obs <- ps_prepare_observations(tables, specs)
+  obs <- prepare_observations(tables, specs)
 
-  out <- ps_build_ttv_state(
+  out <- build_ttv_state(
     observations = obs,
     splits = splits,
     outcome_group = "bmp",
@@ -123,7 +123,7 @@ test_that("ps_build_ttv_state supports multivariate outcomes and sampling per pa
   expect_true(all(c("glucose", "sodium") %in% names(out)))
 
   # sampling is reproducible
-  out2 <- ps_build_ttv_state(
+  out2 <- build_ttv_state(
     observations = obs,
     splits = splits,
     outcome_group = "bmp",

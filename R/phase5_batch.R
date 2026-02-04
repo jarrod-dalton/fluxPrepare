@@ -4,11 +4,11 @@
 #' Builds one dataset per spec (and per optional patient chunk), writes the dataset and metadata to disk,
 #' and returns a manifest describing outputs.
 #'
-#' @param specs List of spec objects created by \code{ps_spec_state()} and/or \code{ps_spec_event()}.
+#' @param specs List of spec objects created by \code{spec_state()} and/or \code{spec_event()}.
 #'   Specs are validated at construction time.
-#' @param splits Output of \code{ps_prepare_splits()} (patient_id + split).
-#' @param events Canonical event stream from \code{ps_prepare_events()} (required for event tasks).
-#' @param observations Canonical observation store from \code{ps_prepare_observations()} (required for state tasks).
+#' @param splits Output of \code{prepare_splits()} (patient_id + split).
+#' @param events Canonical event stream from \code{prepare_events()} (required for event tasks).
+#' @param observations Canonical observation store from \code{prepare_observations()} (required for state tasks).
 #' @param followup Optional follow-up table with patient_id and follow-up columns.
 #' @param out_dir Directory to write outputs.
 #' @param format Output format: \code{"qs"}, \code{"csv"}, \code{"parquet"}, or \code{"rds"}.
@@ -28,7 +28,7 @@
 #'
 #' @return A \code{data.frame} manifest with class \code{"ps_manifest"}.
 #' @export
-ps_build_ttv_batch <- function(specs,
+build_ttv_batch <- function(specs,
                                splits,
                                ctx = NULL,
                                events = NULL,
@@ -57,13 +57,13 @@ ps_build_ttv_batch <- function(specs,
   if (!requireNamespace("digest", quietly = TRUE)) stop("Package 'digest' is required for batch mode (Suggests).")
   if (!requireNamespace("jsonlite", quietly = TRUE)) stop("Package 'jsonlite' is required for metadata writing (Suggests).")
 
-  chunks <- ps_chunk_patients(splits = splits, chunk = chunk, seed = seed)
+  chunks <- chunk_patients(splits = splits, chunk = chunk, seed = seed)
 
   manifest_rows <- list()
   spec_id <- 0L
 
   for (s in specs) {
-    .ps_assert_spec(s, "ps_build_ttv_batch()")
+    .ps_assert_spec(s, "build_ttv_batch()")
     spec_id <- spec_id + 1L
     spec_name <- if (!is.null(s$name)) as.character(s$name) else NA_character_
     task <- if (!is.null(s$task)) as.character(s$task) else NA_character_
@@ -73,8 +73,8 @@ ps_build_ttv_batch <- function(specs,
     if (!task %in% c("event", "state")) {
       stop(sprintf("Spec %d: `task` must be 'event' or 'state'.", spec_id))
     }
-    if (!fun %in% c("ps_build_ttv_event", "ps_build_ttv_state")) {
-      stop(sprintf("Spec %d: `fun` must be 'ps_build_ttv_event' or 'ps_build_ttv_state'.", spec_id))
+    if (!fun %in% c("build_ttv_event", "build_ttv_state")) {
+      stop(sprintf("Spec %d: `fun` must be 'build_ttv_event' or 'build_ttv_state'.", spec_id))
     }
     if (!is.list(args)) stop(sprintf("Spec %d: `args` must be a named list.", spec_id))
 
@@ -213,11 +213,11 @@ ps_build_ttv_batch <- function(specs,
 #' Patient chunking helper
 #'
 #' @param splits Split table with patient_id.
-#' @param chunk List of chunking parameters. See \code{ps_build_ttv_batch()}.
+#' @param chunk List of chunking parameters. See \code{build_ttv_batch()}.
 #' @param seed Optional seed for reproducible shuffling.
 #' @return A list of character vectors of patient_ids.
 #' @export
-ps_chunk_patients <- function(splits, chunk = list(method = "none", shuffle = TRUE), seed = NULL) {
+chunk_patients <- function(splits, chunk = list(method = "none", shuffle = TRUE), seed = NULL) {
   if (is.null(splits) || !is.data.frame(splits) || !"patient_id" %in% names(splits)) {
     stop("`splits` must be a data.frame with column `patient_id`.")
   }
