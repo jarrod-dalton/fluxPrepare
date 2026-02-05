@@ -32,7 +32,7 @@ test_that("Phase 6: include_current toggles whether anchor-time observations are
   derived_fns <- list(
     n_sbp_12_excl = patientSimCore::derive(
       "n_sbp_12_excl",
-      target = patientSimCore::var("sbp"),
+      target = patientSimCore::declare_variable("sbp"),
       lookback_t = 12,
       fn = "count",
       include_current = FALSE,
@@ -40,7 +40,7 @@ test_that("Phase 6: include_current toggles whether anchor-time observations are
     ),
     n_sbp_12_incl = patientSimCore::derive(
       "n_sbp_12_incl",
-      target = patientSimCore::var("sbp"),
+      target = patientSimCore::declare_variable("sbp"),
       lookback_t = 12,
       fn = "count",
       include_current = TRUE,
@@ -83,14 +83,14 @@ test_that("Phase 6: multiple anchors for same patient do not leak state across a
   derived_fns <- list(
     sbp_lag1 = patientSimCore::lag_of(
       "sbp_lag1",
-      patientSimCore::var("sbp"),
+      patientSimCore::declare_variable("sbp"),
       k = 1,
       include_current = FALSE,
       force = TRUE
     ),
     n_sbp_12 = patientSimCore::derive(
       "n_sbp_12",
-      target = patientSimCore::var("sbp"),
+      target = patientSimCore::declare_variable("sbp"),
       lookback_t = 12,
       fn = "count",
       include_current = FALSE,
@@ -140,7 +140,7 @@ test_that("Phase 6: derived_on_missing='error' fails if a derived value is missi
   derived_fns <- list(
     sbp_lag1_nf = patientSimCore::lag_of(
       "sbp_lag1_nf",
-      patientSimCore::var("sbp"),
+      patientSimCore::declare_variable("sbp"),
       k = 1,
       include_current = FALSE,
       force = FALSE

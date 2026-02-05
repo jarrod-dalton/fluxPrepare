@@ -1,3 +1,7 @@
+## patientSimPrepare 1.3.6
+
+- Compatibility: update tests to use `patientSimCore::declare_variable()` (renamed from `patientSimCore::var()` to avoid masking `stats::var()`).
+
 ## patientSimPrepare 1.3.5
 
 - Bugfix: `segment_bins()` now permits `-Inf`/`Inf` endpoints (e.g., `c(-Inf, 160, Inf)`) while still requiring strictly increasing cutpoints.

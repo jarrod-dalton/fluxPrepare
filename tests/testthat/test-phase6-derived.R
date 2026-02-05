@@ -19,8 +19,8 @@ test_that("Phase 6: reconstruct_state_at can add Core-derived variables at ancho
   schema$sbp <- list(type = "continuous", default = NA_real_, coerce = as.numeric)
 
   derived_fns <- list(
-    sbp_lag1 = patientSimCore::lag_of("sbp_lag1", patientSimCore::var("sbp"), k = 1, include_current = FALSE, force = TRUE),
-    n_sbp_12 = patientSimCore::derive("n_sbp_12", target = patientSimCore::var("sbp"), lookback_t = 12, fn = "count", include_current = FALSE, force = FALSE)
+    sbp_lag1 = patientSimCore::lag_of("sbp_lag1", patientSimCore::declare_variable("sbp"), k = 1, include_current = FALSE, force = TRUE),
+    n_sbp_12 = patientSimCore::derive("n_sbp_12", target = patientSimCore::declare_variable("sbp"), lookback_t = 12, fn = "count", include_current = FALSE, force = FALSE)
   )
 
   provider <- core_derived_provider(schema = schema, derived_var_fns = derived_fns)
