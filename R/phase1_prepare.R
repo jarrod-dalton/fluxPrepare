@@ -1,14 +1,3 @@
-#' Prepare a patient-level split table
-#'
-#' Validates and normalizes a patient-level assignment table for train/test/validation splitting.
-#' Splits are enforced at the patient level to prevent within-patient leakage.
-#'
-#' @param df A data.frame containing at least patient id and split assignment.
-#' @param id_col Name of the patient id column.
-#' @param split_col Name of the split column.
-#' @param allowed Character vector of allowed split labels (case-insensitive).
-#' @return A data.frame with columns: patient_id, split.
-#' @export
 prepare_splits <- function(df,
                              id_col = "patient_id",
                              split_col = "split",
@@ -48,20 +37,6 @@ prepare_splits <- function(df,
   out
 }
 
-#' Prepare a canonical event stream
-#'
-#' Normalizes one or more event tables into a single canonical event stream with enforced columns:
-#' patient_id, time, event_type. If multiple tables are provided, their provenance is retained.
-#'
-#' @param events Either a data.frame of events, or a named list of event data.frames.
-#' @param id_col Patient id column name (applied to all tables).
-#' @param time_col Time column name (applied to all tables).
-#' @param type_col Event type column name for single-table input. Ignored when `events` is a list.
-#' @param table_event_type Optional named character vector mapping list element names -> event_type.
-#'        If not provided, the list element name is used as the event_type.
-#' @param sort Logical; if TRUE, sort events within patient by time (then event_type).
-#' @return A data.frame with columns: patient_id, time, event_type, source_table.
-#' @export
 prepare_events <- function(events,
                              id_col = "patient_id",
                              time_col = "time",
@@ -118,7 +93,7 @@ time_spec <- NULL
 
 if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
   time_spec <- .ps_time_spec_or_stop(ctx, "prepare_events")
-  ev$time <- patientSimCore::ps_time_to_model(ev$time, time_spec)
+  ev$time <- patientSimCore::time_to_model(ev$time, time_spec)
 } else {
   ev$time <- .ps_coerce_time_numeric(ev$time)
 }
@@ -144,18 +119,6 @@ if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
   ev
 }
 
-#' Prepare canonical observation tables
-#'
-#' Normalizes a list of "wide-ish" observational tables into a single canonical observation store.
-#' Each table is assumed to represent a measurement group (e.g., bp, bmp) observed at a time.
-#'
-#' @param tables Named list of data.frames.
-#' @param specs Named list describing, for each table, the id column, time column, and measured variables.
-#'        Each element must be a list with fields: id_col, time_col, vars, group (optional; defaults to table name).
-#' @param keep_source Logical; if TRUE, include source_table column.
-#' @param sort Logical; if TRUE, sort observations within patient by time (then group).
-#' @return A data.frame with at least: patient_id, time, group, (vars...), source_table (optional).
-#' @export
 prepare_observations <- function(tables,
                                    specs,
                                    keep_source = TRUE,
@@ -219,7 +182,7 @@ prepare_observations <- function(tables,
     time_classes[[i]] <- class(tmp$time)[1]
     if (inherits(tmp$time, "Date") || inherits(tmp$time, "POSIXt")) {
       if (is.null(time_spec)) time_spec <- .ps_time_spec_or_stop(ctx, "prepare_observations")
-      tmp$time <- patientSimCore::ps_time_to_model(tmp$time, time_spec)
+      tmp$time <- patientSimCore::time_to_model(tmp$time, time_spec)
     } else {
       tmp$time <- .ps_coerce_time_numeric(tmp$time)
     }
@@ -283,7 +246,7 @@ prepare_observations <- function(tables,
       length(ctx$time$unit) != 1L || is.na(ctx$time$unit) || ctx$time$unit == "") {
     stop(sprintf("%s(): ctx$time$unit must be set when time columns are Date/POSIXct.", fn_name), call. = FALSE)
   }
-  patientSimCore::ps_time_spec(ctx)
+  patientSimCore::time_spec(ctx)
 }
 
 # ---- internal helpers (not exported) ----
@@ -322,7 +285,7 @@ prepare_observations <- function(tables,
     if (is.null(time_spec)) {
       stop(sprintf("%s: calendar times require ctx$time$unit (and optional ctx$time$origin/ctx$time$zone).", where), call. = FALSE)
     }
-    return(patientSimCore::ps_time_to_model(x, time_spec))
+    return(patientSimCore::time_to_model(x, time_spec))
   }
 
   # Disallow character/factor time inputs to avoid silent parsing surprises.

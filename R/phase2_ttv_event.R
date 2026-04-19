@@ -1,34 +1,3 @@
-#' Build one-step TTV dataset for an event model
-#'
-#' Constructs an interval-based training/test/validation (TTV) dataset for a specified event type.
-#' Each row corresponds to a patient-level interval starting at t0 and ending at t1, where:
-#' \itemize{
-#'   \item t0 is defined by a start-time policy (baseline).
-#'   \item t1 is the next occurrence time of the requested event type after t0, if it occurs before censoring.
-#'   \item Otherwise, t1 is the censoring time (e.g., follow-up end).
-#' }
-#'
-#' Output includes \code{deltat = t1 - t0} and an \code{event_occurred} indicator.
-#' This function is deliberately one-step and event-time native (no time grid).
-#'
-#' @param events A canonical event stream as returned by \code{prepare_events()}.
-#' @param splits A patient split table as returned by \code{prepare_splits()}.
-#' @param event_type Character scalar specifying the event type to model.
-#' @param t0_strategy How to define t0 for each patient. One of:
-#'   \itemize{
-#'     \item \code{"followup_start"}: use follow-up start if provided, else the patient's first observed event time.
-#'     \item \code{"first_event"}: use the patient's first observed event time.
-#'     \item \code{"fixed"}: use \code{fixed_t0} for all patients.
-#'   }
-#' @param fixed_t0 Numeric scalar used when \code{t0_strategy = "fixed"}.
-#' @param followup Optional data.frame containing follow-up boundaries. If provided, must include
-#'   patient_id and columns given by \code{fu_start_col} and \code{fu_end_col}. Times may be numeric, Date, or POSIXt.
-#' @param fu_start_col Follow-up start column name in \code{followup}.
-#' @param fu_end_col Follow-up end column name in \code{followup}.
-#' @param death_col Optional death time column name in \code{followup}. If provided, censoring time is \code{pmin(fu_end, death_time)}.
-#' @return A data.frame with columns: patient_id, split, t0, t1, deltat, event_occurred, time_to_event,
-#'   censoring_time. Attributes include \code{spec} and \code{metadata}.
-#' @export
 build_ttv_event <- function(events,
                                splits,
                                ctx = NULL,
@@ -188,27 +157,6 @@ build_ttv_event <- function(events,
 }
 
 
-#' Build start-stop TTV dataset for an event *process* (cause-specific hazards / multistate)
-#'
-#' Constructs a counting-process (start-stop) TTV dataset suitable for cause-specific Cox models
-#' and parametric multistate models (e.g., \pkg{flexsurv}). A process is defined as a set of event
-#' types (causes). Each patient contributes one or more intervals (t0 -> t1) until the first
-#' occurrence of any event in the process or censoring.
-#'
-#' Optionally, intervals can be split at observation update times for specified groups, with an
-#' optional minimum spacing (\code{min_dt}) to cap splitting frequency.
-#'
-#' @param events A canonical event stream as returned by \code{prepare_events()}.
-#' @param observations A canonical observation store as returned by \code{prepare_observations()}.
-#' @param splits A patient split table as returned by \code{prepare_splits()}.
-#' @param spec A \code{spec_event_process} object created by \code{spec_event_process()}.
-#' @param followup Optional follow-up table. See \code{build_ttv_event()} for column requirements.
-#' @param ctx Optional patientSimCore context.
-#'
-#' @return A data.frame with one or more rows per patient. Columns include:
-#'   patient_id, split, t0, t1, deltat, event_occurred, event_type, censoring_time.
-#'   Only the terminal interval for a patient can have \code{event_occurred = TRUE}.
-#' @export
 build_ttv_event_process <- function(events,
                                       observations,
                                       splits,

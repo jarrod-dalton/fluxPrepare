@@ -1,33 +1,3 @@
-#' Batch-build TTV datasets to disk
-#'
-#' Phase 5: disk-backed batch workflows.
-#' Builds one dataset per spec (and per optional patient chunk), writes the dataset and metadata to disk,
-#' and returns a manifest describing outputs.
-#'
-#' @param specs List of spec objects created by \code{spec_state()} and/or \code{spec_event()}.
-#'   Specs are validated at construction time.
-#' @param splits Output of \code{prepare_splits()} (patient_id + split).
-#' @param events Canonical event stream from \code{prepare_events()} (required for event tasks).
-#' @param observations Canonical observation store from \code{prepare_observations()} (required for state tasks).
-#' @param followup Optional follow-up table with patient_id and follow-up columns.
-#' @param out_dir Directory to write outputs.
-#' @param format Output format: \code{"qs"}, \code{"csv"}, \code{"parquet"}, or \code{"rds"}.
-#' @param overwrite If FALSE, error if output files already exist.
-#' @param seed Optional integer seed used for chunking and any per-spec sampling.
-#' @param strict If TRUE, stop on first error; if FALSE, continue and record errors in manifest.
-#' @param compress If TRUE, compress outputs where supported (qs, csv.gz). Parquet is already compressed by codec.
-#' @param manifest_name Base filename for manifest outputs.
-#' @param chunk Optional list controlling patient chunking. Supported:
-#'   \describe{
-#'     \item{method}{\code{"none"}, \code{"n_chunks"}, \code{"chunk_size"}, \code{"pct"}.}
-#'     \item{n_chunks}{Integer number of chunks (for method = "n_chunks").}
-#'     \item{chunk_size}{Integer patients per chunk (for method = "chunk_size").}
-#'     \item{pct}{Fraction in (0,1] of patients per chunk (for method = "pct").}
-#'     \item{shuffle}{Logical, default TRUE.}
-#'   }
-#'
-#' @return A \code{data.frame} manifest with class \code{"ps_manifest"}.
-#' @export
 build_ttv_batch <- function(specs,
                                splits,
                                ctx = NULL,
@@ -210,13 +180,6 @@ build_ttv_batch <- function(specs,
   manifest
 }
 
-#' Patient chunking helper
-#'
-#' @param splits Split table with patient_id.
-#' @param chunk List of chunking parameters. See \code{build_ttv_batch()}.
-#' @param seed Optional seed for reproducible shuffling.
-#' @return A list of character vectors of patient_ids.
-#' @export
 chunk_patients <- function(splits, chunk = list(method = "none", shuffle = TRUE), seed = NULL) {
   if (is.null(splits) || !is.data.frame(splits) || !"patient_id" %in% names(splits)) {
     stop("`splits` must be a data.frame with column `patient_id`.")

@@ -2,16 +2,6 @@
 # Phase 6: Derived-variable integration (Core re-use via provider)
 # ------------------------------------------------------------------------------
 
-#' Create a patientSimCore-backed derived-variable provider
-#'
-#' This provider evaluates patientSimCore-style derived variable functions
-#' (f(patient, j, t) -> scalar or NULL) at anchor times by reconstructing a
-#' minimal Patient history from the provided observation/event context.
-#'
-#' @param schema A patientSimCore schema (named list) used to initialize Patient objects.
-#' @param derived_var_fns Named list of derived variable functions compatible with patientSimCore.
-#' @return A provider object (list) with a `$compute()` method.
-#' @export
 core_derived_provider <- function(schema, derived_var_fns) {
   if (!is.list(schema) || is.null(names(schema))) {
     stop("core_derived_provider(): `schema` must be a named list (patientSimCore schema).", call. = FALSE)
@@ -170,19 +160,6 @@ core_derived_provider <- function(schema, derived_var_fns) {
   provider
 }
 
-#' Add derived variables at anchor times
-#'
-#' @param state_at Data.frame produced by reconstruct_state_at().
-#' @param anchors Data.frame with patient_id and t0 (same rows as state_at).
-#' @param derived_vars Character vector of derived variable names to compute.
-#' @param provider Derived-variable provider (e.g., from core_derived_provider()).
-#' @param context List containing at least `observations`, and optionally `events`.
-#' @param derived_on_missing "na" (default) to fill with NA when not computable; "error" to stop.
-#' @param keep_derived_provenance If TRUE, add `.avail_<var>` columns.
-#' @param count_no_history If "zero", replace NA with 0 for variables listed in `count_vars`.
-#' @param count_vars Character vector of derived vars to treat as count-like (eligible for NA->0 when requested).
-#' @return state_at with derived variables appended (and optional availability flags).
-#' @export
 add_derived_at <- function(state_at,
                               anchors,
                               derived_vars,

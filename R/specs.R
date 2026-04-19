@@ -1,29 +1,3 @@
-#' Construct a validated state-model spec
-#'
-#' Specs are the modeler's declared "lens" on raw observation tables.
-#' A state spec declares: (a) the outcome group that defines interval anchors,
-#' (b) outcome variables, and (c) predictor variables. The spec is validated
-#' against a patientSimCore schema at construction time.
-#'
-#' @param schema A patientSimCore schema (named list).
-#' @param outcome_group Character scalar. Observation group used to build anchor intervals.
-#' @param outcome_vars Character vector. Outcome variables.
-#' @param predictor_vars Character vector. Predictor variables.
-#' @param name Optional human-readable name.
-#' @param lookback Lookback window (numeric scalar). Passed to \code{build_ttv_state()}.
-#' @param staleness Staleness window (numeric scalar). Passed to \code{build_ttv_state()}.
-#' @param keep_provenance Logical. Passed to \code{build_ttv_state()}.
-#' @param row_policy One of \code{"return_all"} or \code{"drop_incomplete"}.
-#' @param derived_vars Optional character vector of derived variable names.
-#' @param derived_provider Optional provider string. Passed to \code{build_ttv_state()}.
-#' @param derived_context Optional list. Passed to \code{build_ttv_state()}.
-#' @param derived_on_missing One of \code{"na"} or \code{"error"}.
-#' @param keep_derived_provenance Logical. Passed to \code{build_ttv_state()}.
-#' @param count_no_history One of \code{"na"} or \code{"zero"}.
-#' @param count_vars Optional character vector of variables for which count-derived vars may be requested.
-#'
-#' @return A spec object with class \code{"spec_state", "ps_spec"}.
-#' @export
 spec_state <- function(schema,
                           outcome_group,
                           outcome_vars,
@@ -68,20 +42,20 @@ spec_state <- function(schema,
   }
 
   # Validate schema and variables up front (Core is authoritative)
-  schema <- patientSimCore::ps_schema_validate(schema)
+  schema <- patientSimCore::schema_validate(schema)
   all_vars <- unique(c(outcome_vars, predictor_vars))
-  patientSimCore::ps_schema_assert_vars(schema, all_vars)
+  patientSimCore::schema_assert_vars(schema, all_vars)
 
   if (!is.null(derived_vars)) {
     if (!is.character(derived_vars)) stop("spec_state(): derived_vars must be NULL or a character vector.", call. = FALSE)
     derived_vars <- unique(as.character(derived_vars))
-    patientSimCore::ps_schema_assert_vars(schema, derived_vars)
+    patientSimCore::schema_assert_vars(schema, derived_vars)
   }
 
   if (!is.null(count_vars)) {
     if (!is.character(count_vars)) stop("spec_state(): count_vars must be NULL or a character vector.", call. = FALSE)
     count_vars <- unique(as.character(count_vars))
-    patientSimCore::ps_schema_assert_vars(schema, count_vars)
+    patientSimCore::schema_assert_vars(schema, count_vars)
   }
 
   if (!is.numeric(lookback) || length(lookback) != 1L || is.na(lookback)) {
@@ -142,22 +116,6 @@ spec_state <- function(schema,
   spec
 }
 
-#' Construct a validated event-model spec
-#'
-#' Event specs declare a target event type and the baseline (t0) policy.
-#' Unlike state specs, event specs do not validate against a patientSimCore schema
-#' because event types are defined by the user-provided event stream.
-#'
-#' @param event_type Character scalar specifying the event type to model.
-#' @param name Optional human-readable name.
-#' @param t0_strategy One of \code{"followup_start"}, \code{"first_event"}, or \code{"fixed"}.
-#' @param fixed_t0 Numeric scalar used when \code{t0_strategy = "fixed"}.
-#' @param fu_start_col Follow-up start column name.
-#' @param fu_end_col Follow-up end column name.
-#' @param death_col Optional death time column name.
-#'
-#' @return A spec object with class \code{"spec_event", "ps_spec"}.
-#' @export
 spec_event <- function(event_type,
                           name = NULL,
                           t0_strategy = c("followup_start", "first_event", "fixed"),
@@ -213,15 +171,6 @@ spec_event <- function(event_type,
   spec
 }
 
-#' Build segmentation rules for time segmentation
-#'
-#' These helper constructors define what counts as a \emph{meaningful} change in
-#' predictors when building start-stop (TTV) event-process datasets.
-#'
-#' @param ... Named arguments whose names are variable names.
-#'
-#' @return A segmentation-rules object (a list with class \code{"segment_rules"}).
-#' @export
 segment_bins <- function(...) {
   bins <- list(...)
   if (length(bins) == 0L) stop("segment_bins(): supply at least one variable.", call. = FALSE)
@@ -242,7 +191,6 @@ segment_bins <- function(...) {
   out
 }
 
-#' @export
 segment_eps <- function(...) {
   eps <- c(...)
   if (length(eps) == 0L) stop("segment_eps(): supply at least one variable.", call. = FALSE)
@@ -254,7 +202,6 @@ segment_eps <- function(...) {
   out
 }
 
-#' @export
 segment_rel_eps <- function(...) {
   rel_eps <- c(...)
   if (length(rel_eps) == 0L) stop("segment_rel_eps(): supply at least one variable.", call. = FALSE)
@@ -266,8 +213,6 @@ segment_rel_eps <- function(...) {
   out
 }
 
-#' @param ... Character vectors of variable names.
-#' @export
 segment_flip <- function(...) {
   vars <- unlist(list(...), use.names = FALSE)
   if (!is.character(vars) || length(vars) < 1L || anyNA(vars) || any(trimws(vars) == "")) {
@@ -278,15 +223,6 @@ segment_flip <- function(...) {
   out
 }
 
-#' Combine multiple segmentation-rule objects
-#'
-#' Later rules overwrite earlier rules of the same type for the same variable.
-#'
-#' @param ... One or more objects created by \code{segment_bins()}, \code{segment_eps()},
-#'   \code{segment_rel_eps()}, or \code{segment_flip()}.
-#'
-#' @return A segmentation-rules object.
-#' @export
 segment_rules_combine <- function(...) {
   rules <- list(...)
   if (length(rules) == 0L) stop("segment_rules_combine(): provide at least one rules object.", call. = FALSE)
@@ -310,49 +246,6 @@ segment_rules_combine <- function(...) {
 }
 
 
-#' Construct an event-process spec for start-stop / cause-specific hazard modeling
-#'
-#' This spec defines an event *process* as a set of event types (causes) and a
-#' splitting policy for constructing a counting-process (start-stop) training/test/validation
-#' dataset. It is designed to support cause-specific Cox models and parametric competing-risks
-#' models (e.g., \pkg{flexsurv}) without imposing a fixed time grid.
-#'
-#' @param event_types Character vector of event types that constitute the process (causes).
-#' @param name Optional human-readable name.
-#' @param split_on_groups Optional character vector of observation groups that can trigger interval
-#'   splitting (e.g., \code{c("labs", "visits")}). If NULL, no splitting is performed (one interval
-#'   per patient until event/censoring).
-#' @param segment_on_vars Optional character vector of observation variables to use for time segmentation.
-#'   When provided, candidate segmentation times are filtered to those at which at least one of these
-#'   variables is observed (non-missing), and a new interval boundary is created only when a
-#'   "meaningful change" is detected according to \code{segment_rules}.
-#' @param segment_rules Optional segmentation rules. You may pass a list directly, or use
-#'   helper constructors such as \code{segment_bins()}, \code{segment_eps()}, \code{segment_rel_eps()}, and
-#'   \code{segment_flip()}, optionally combined with \code{segment_rules_combine()}.
-#' @param candidate_times How to generate candidate time boundaries before applying \code{min_dt} and
-#'   \code{segment_rules}. One of \code{"groups"} (default), \code{"vars"}, or \code{"groups_or_vars"}.
-#'   \code{"groups"} uses times from \code{split_on_groups}. \code{"vars"} uses times where
-#'   \code{segment_on_vars} are observed. \code{"groups_or_vars"} uses the union. Supported
-#'   entries include:\cr
-#'   \itemize{
-#'     \item \code{eps}: named numeric vector of absolute-change thresholds per variable.
-#'     \item \code{rel_eps}: named numeric vector of relative-change thresholds per variable.
-#'     \item \code{bins}: named list of numeric cutpoints per variable; segmentation occurs when the
-#'       value moves to a different bin.
-#'     \item \code{flip}: character vector of variables treated as booleans/categoricals; segmentation
-#'       occurs when the value changes.
-#'   }
-#' @param min_dt Optional minimum spacing between split times (numeric scalar, same time units as
-#'   prepared times). When > 0, split candidates closer than \code{min_dt} are ignored.
-#' @param t0_strategy How to define t0 for each patient. One of \code{"followup_start"},
-#'   \code{"first_event"}, or \code{"fixed"}.
-#' @param fixed_t0 Numeric scalar used when \code{t0_strategy = "fixed"}.
-#' @param fu_start_col Follow-up start column name.
-#' @param fu_end_col Follow-up end column name.
-#' @param death_col Optional death time column name.
-#'
-#' @return A spec object with class \code{"spec_event_process", "ps_spec"}.
-#' @export
 spec_event_process <- function(event_types,
                                   name = NULL,
                                   split_on_groups = NULL,

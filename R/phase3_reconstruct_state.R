@@ -1,20 +1,3 @@
-#' Reconstruct as-of state at anchor times
-#'
-#' Reconstruct requested variables as the most recent observed non-missing values
-#' at or before each anchor time (LOCF), subject to optional lookback and
-#' staleness constraints.
-#'
-#' @param anchors A data.frame with patient id and anchor time.
-#' @param observations Canonical observation store (e.g., from prepare_observations()).
-#' @param vars Character vector of variable names to reconstruct.
-#' @param id_col Patient id column in `anchors`.
-#' @param time_col Anchor time column in `anchors`.
-#' @param lookback Numeric lookback window; only observations with time >= t0 - lookback are eligible.
-#' @param staleness Numeric maximum age; single value or named vector with per-variable values.
-#' @param keep_provenance If TRUE, add per-variable `.time_<var>` and `.prov_<var>` columns.
-#' @param ctx Optional patientSimCore context, used only when anchor/observation times are Date/POSIXt.
-#' @return A data.frame with columns patient_id, t0, reconstructed vars, and optional provenance.
-#' @export
 reconstruct_state_at <- function(anchors,
                                    observations,
                                    vars,

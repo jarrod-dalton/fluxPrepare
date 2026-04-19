@@ -1,3 +1,9 @@
+## patientSimPrepare 1.4.0
+
+- Documentation alignment: manual `.Rd` pages were refreshed to match current exported function names/signatures (including `build_ttv_event()`, `build_ttv_state()`, `build_ttv_batch()`, `chunk_patients()`, and `reconstruct_state_at()`).
+- Docs/examples: refreshed README/vignette examples and API references to current non-`ps_` naming.
+- Packaging hygiene: removed roxygen-style blocks from `R/` and standardized filenames to underscore style.
+
 ## patientSimPrepare 1.3.6
 
 - Compatibility: update tests to use `patientSimCore::declare_variable()` (renamed from `patientSimCore::var()` to avoid masking `stats::var()`).
@@ -19,11 +25,11 @@
 ## patientSimPrepare 1.3.2
 
 - Event-process TTV construction: added optional time-segmentation rules based on "meaningful change" in specified covariates (e.g., bin crossings, tolerance thresholds, boolean flips), to avoid over-fragmenting slow-process risk intervals when frequent measurements change only trivially.
-- Bugfix: `ps_reconstruct_state_at()` now accepts an optional `ctx` argument for Date/POSIXt time handling.
+- Bugfix: `reconstruct_state_at()` now accepts an optional `ctx` argument for Date/POSIXt time handling.
 
 ## patientSimPrepare 1.3.1
 
-- Added `ps_spec_event_process()` and `ps_build_ttv_event_process()` to construct start-stop TTV datasets for cause-specific hazard and parametric competing-risk event models, with optional capped-frequency splitting via `min_dt`.
+- Added `spec_event_process()` and `build_ttv_event_process()` to construct start-stop TTV datasets for cause-specific hazard and parametric competing-risk event models, with optional capped-frequency splitting via `min_dt`.
 
 ## 1.3.0
 
@@ -41,14 +47,14 @@
 
 - Add LICENSE file to align repository structure with ecosystem standards.
 
-- Fix follow-up calendar time coercion in `ps_build_ttv_event()` (pass compiled Core time spec to internal coercion).
+- Fix follow-up calendar time coercion in `build_ttv_event()` (pass compiled Core time spec to internal coercion).
 - Update calendar follow-up unit test to use the current `prepare_observations()` interface.
 
 ## patientSimPrepare 0.8.0
 
-- Add spec constructors `ps_spec_state()` and `ps_spec_event()`.
+- Add spec constructors `spec_state()` and `spec_event()`.
 - Specs are now classed objects and are validated against the Core schema at construction time.
-- `ps_build_ttv_batch()` now requires spec objects (no raw list specs).
+- `build_ttv_batch()` now requires spec objects (no raw list specs).
 
 ## 0.7.14
 

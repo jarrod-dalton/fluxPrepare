@@ -186,7 +186,7 @@ An event-model dataset expresses the interval from a start policy (often baselin
 
 ```r
 # eval = FALSE
-ttv_event <- ps_build_ttv_event(
+ttv_event <- build_ttv_event(
   events     = events,
   splits     = splits,
   ctx        = ctx,
@@ -201,7 +201,7 @@ A state-transition dataset expresses consecutive within-patient intervals anchor
 
 ```r
 # eval = FALSE
-ttv_state <- ps_build_ttv_state(
+ttv_state <- build_ttv_state(
   observations   = observations,
   splits         = splits,
   ctx            = ctx,
@@ -236,7 +236,7 @@ Specs are validated against the model schema at construction time. This prevents
 # eval = FALSE
 schema <- patientSimCore::default_patient_schema()
 
-spec_bp <- ps_spec_state(
+spec_bp <- spec_state(
   schema         = schema,
   outcome_group  = "bp",
   outcome_vars   = "sbp",
@@ -244,7 +244,7 @@ spec_bp <- ps_spec_state(
   name           = "Blood pressure (SBP)"
 )
 
-batch <- ps_build_ttv_batch(
+batch <- build_ttv_batch(
   observations = observations,
   events       = events,
   splits       = splits,

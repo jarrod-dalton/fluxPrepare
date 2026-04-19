@@ -44,28 +44,28 @@ spec_event <- list(
   censoring = list(followup_end = "followup_end")
 )
 
-ttv_event <- ps_build_ttv_event(
+ttv_event <- build_ttv_event(
   splits = splits,
   events = events,
-  spec = spec_event
+  event_type = "mi"
 )
 
 # 3) State reconstruction at anchors
-state_at_t0 <- ps_reconstruct_state_at(
+state_at_t0 <- reconstruct_state_at(
   anchors = data.frame(patient_id = c("p1"), t0 = c(365)),
   observations = obs,
   vars = c("sbp", "ldl"),
-  lookback_t = 365 * 2,
-  stale_after_t = 365
+  lookback = 365 * 2,
+  staleness = 365
 )
 
 # 4) State-transition datasets
-spec_state <- list(group = "bp")
-
-ttv_state <- ps_build_ttv_state(
+ttv_state <- build_ttv_state(
   splits = splits,
   observations = obs,
-  spec = spec_state
+  outcome_group = "bp",
+  outcome_vars = c("sbp"),
+  predictor_vars = c("sbp", "ldl")
 )
 ```
 
