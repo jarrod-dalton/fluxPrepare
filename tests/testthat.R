@@ -1,4 +1,4 @@
 library(testthat)
-library(patientSimPrepare)
+library(fluxPrepare)
 
-test_check("patientSimPrepare")
+test_check("fluxPrepare")

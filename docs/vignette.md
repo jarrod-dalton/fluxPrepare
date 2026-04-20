@@ -1,7 +1,7 @@
-# patientSimPrepare vignette
+# fluxPrepare vignette
 ## Building train/test/validation datasets from irregular longitudinal tables
 
-patientSimPrepare exists for one job: to turn irregular, patient-level tables into **train/test/validation (TTV)** datasets whose columns have the *same meanings* the simulation ecosystem will later assume.
+fluxPrepare exists for one job: to turn irregular, entity-level tables into **train/test/validation (TTV)** datasets whose columns have the *same meanings* the simulation ecosystem will later assume.
 
 If you have ever watched an EHR-derived model fail quietly, it is usually not because the optimizer was bad. It is because the training data carried a hidden semantic mismatch: an outcome sneaked into predictors, an interval was defined inconsistently, a “baseline” meant two different things in two different steps, or eligibility rules were implemented as side effects instead of explicit logic.
 
@@ -9,9 +9,9 @@ This vignette is written for readers who are comfortable with longitudinal data 
 
 ---
 
-## Where Prepare fits in the patientSim ecosystem
+## Where Prepare fits in the flux ecosystem
 
-The patientSim ecosystem distinguishes three layers that are easy to confuse when you live inside raw tables:
+The flux ecosystem distinguishes three layers that are easy to confuse when you live inside raw tables:
 
 **Observations** are what you actually have: sparse, irregular measurements with timestamps, missingness, and shifting measurement cadence.
 
@@ -19,13 +19,13 @@ The patientSim ecosystem distinguishes three layers that are easy to confuse whe
 
 **Derived variables** are context variables computed from state and history under strict temporal constraints, so that the same feature definition can be used during training and during simulation.
 
-patientSimPrepare lives at the boundary between the first layer and the second. It does not “clean data” in the generic sense; it creates model-ready datasets that respect the ecosystem’s contracts: one-step intervals, explicit time deltas, no implicit denominators, and no leakage.
+fluxPrepare lives at the boundary between the first layer and the second. It does not “clean data” in the generic sense; it creates model-ready datasets that respect the ecosystem’s contracts: one-step intervals, explicit time deltas, no implicit denominators, and no leakage.
 
 ---
 
 ## Core concepts and vocabulary
 
-The words below are used precisely throughout patientSimPrepare. If any of these terms feel slippery, pause here. Dataset construction gets people in trouble precisely because everyday meanings drift.
+The words below are used precisely throughout fluxPrepare. If any of these terms feel slippery, pause here. Dataset construction gets people in trouble precisely because everyday meanings drift.
 
 An **anchor time** is a time at which a row of a dataset is defined. In one-step datasets, anchors occur in pairs: a start anchor `t0` and an end anchor `t1`.
 
@@ -76,7 +76,7 @@ Prepare expects a small number of table families. The package does not require a
 
 ### Splits
 
-The splits table assigns each patient to exactly one of train/test/validation. This assignment is patient-level, not row-level. If a patient leaks across splits, you do not have a validation set.
+The splits table assigns each entity to exactly one of train/test/validation. This assignment is entity-level, not row-level. If an entity leaks across splits, you do not have a validation set.
 
 ```r
 # eval = FALSE
@@ -115,7 +115,7 @@ events <- prepare_events(
 
 ### Observations
 
-Observations are irregular measurements. Prepare accepts either a single data frame or a named list of data frames. Each observation row has a patient id, a time, a group label, and one or more measurement columns.
+Observations are irregular measurements. Prepare accepts either a single data frame or a named list of data frames. Each observation row has an entity id, a time, a group label, and one or more measurement columns.
 
 The group label exists because many modeling tasks are naturally group-anchored: “blood pressure visits” anchor intervals for BP transition models; “lab panels” anchor intervals for lab-driven transitions.
 
@@ -139,12 +139,12 @@ observations <- prepare_observations(
 
 ### Follow-up
 
-Follow-up describes the time range over which a patient is under observation. It is used to construct censoring-aware intervals. Follow-up should not be treated as a polite suggestion. If a patient is not under follow-up, the absence of an event is not evidence of non-occurrence.
+Follow-up describes the time range over which an entity is under observation. It is used to construct censoring-aware intervals. Follow-up should not be treated as a polite suggestion. If an entity is not under follow-up, the absence of an event is not evidence of non-occurrence.
 
 ```r
 # eval = FALSE
 followup <- data.frame(
-  patient_id     = c("a", "b"),
+  entity_id     = c("a", "b"),
   followup_start = as.Date(c("1970-01-01", "1970-01-01")),
   followup_end   = as.Date(c("1970-01-11", "1970-01-11"))
 )
@@ -197,7 +197,7 @@ ttv_event <- build_ttv_event(
 
 ### State-transition datasets
 
-A state-transition dataset expresses consecutive within-patient intervals anchored by observation times in a chosen outcome group. Predictors are reconstructed at `t0` under the as-of rules described above; outcomes are taken from the next anchor at `t1`.
+A state-transition dataset expresses consecutive within-entity intervals anchored by observation times in a chosen outcome group. Predictors are reconstructed at `t0` under the as-of rules described above; outcomes are taken from the next anchor at `t1`.
 
 ```r
 # eval = FALSE
@@ -234,7 +234,7 @@ Specs are validated against the model schema at construction time. This prevents
 
 ```r
 # eval = FALSE
-schema <- patientSimCore::default_patient_schema()
+schema <- fluxCore::default_entity_schema()
 
 spec_bp <- spec_state(
   schema         = schema,
@@ -262,7 +262,7 @@ Batch outputs are disk-backed and include metadata describing the spec and the r
 
 Prepare is deliberately upstream of modeling and validation. Its outputs are meant to be used to train transition mechanisms that ultimately live inside model bundles, and to construct observed datasets that Validation can compare to simulated outputs.
 
-Prepare does not define validation denominators. Instead, it produces datasets and metadata that make denominator decisions possible to audit. patientSimValidation then expresses inclusion and exclusion logic explicitly as masks. The intent is that no one is “quietly” removed from a denominator because a join dropped rows or a missing value was interpreted as ineligibility.
+Prepare does not define validation denominators. Instead, it produces datasets and metadata that make denominator decisions possible to audit. fluxValidation then expresses inclusion and exclusion logic explicitly as masks. The intent is that no one is “quietly” removed from a denominator because a join dropped rows or a missing value was interpreted as ineligibility.
 
 This separation also keeps the simulation engine small. Core remains responsible for state, events, and time. Prepare is responsible for constructing training and observed datasets under strict temporal constraints. Validation is responsible for comparing like-with-like, with denominators made explicit.
 

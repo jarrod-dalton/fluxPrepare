@@ -7,7 +7,7 @@ test_that("reconstruct_state_at performs LOCF with lookback and staleness", {
   anchors <- data.frame(pid = c("a", "a"), t0 = c(3, 5))
 
   out <- reconstruct_state_at(anchors, obs, vars = c("sbp", "dbp"), id_col = "pid", time_col = "t0")
-  expect_s3_class(out, "ps_state_asof")
+  expect_s3_class(out, "flux_state_asof")
   expect_equal(out$sbp, c(120, 130))
   expect_equal(out$.prov_sbp, c("carried_forward", "carried_forward"))
 

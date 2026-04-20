@@ -4,7 +4,7 @@ test_that("build_ttv_state converts followup Date times using ctx$time", {
     id_col = "pid", split_col = "split"
   )
 
-  # Two observations per patient so we form at least one interval.
+  # Two observations per entity so we form at least one interval.
   obs <- prepare_observations(
     tables = list(
       labs = data.frame(
@@ -22,7 +22,7 @@ test_that("build_ttv_state converts followup Date times using ctx$time", {
   )
 
   followup <- data.frame(
-    patient_id = c("a","b"),
+    entity_id = c("a","b"),
     followup_start = as.Date(c("1970-01-01","1970-01-01")),
     followup_end   = as.Date(c("1970-01-06","1970-01-06"))
   )

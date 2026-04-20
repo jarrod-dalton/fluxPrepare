@@ -6,21 +6,21 @@ test_that("build_ttv_batch writes datasets + manifest (rds)", {
   dir.create(tmp)
 
   splits <- data.frame(
-    patient_id = c("p1", "p2"),
+    entity_id = c("p1", "p2"),
     split = c("train", "test"),
     stringsAsFactors = FALSE
   )
   splits <- prepare_splits(splits)
 
   obs_tbl <- data.frame(
-    patient_id = c("p1", "p1", "p2", "p2"),
+    entity_id = c("p1", "p1", "p2", "p2"),
     time = c(0, 10, 0, 10),
     sbp = c(120, 130, 110, 115),
     stringsAsFactors = FALSE
   )
   observations <- prepare_observations(
     tables = list(bp = obs_tbl),
-    specs = list(bp = list(id_col = "patient_id", time_col = "time", vars = c("sbp"), group = "bp"))
+    specs = list(bp = list(id_col = "entity_id", time_col = "time", vars = c("sbp"), group = "bp"))
   )
 
   schema <- list(
@@ -49,7 +49,7 @@ test_that("build_ttv_batch writes datasets + manifest (rds)", {
     chunk = list(method = "n_chunks", n_chunks = 1, shuffle = FALSE)
   )
 
-  expect_s3_class(man, "ps_manifest")
+  expect_s3_class(man, "flux_manifest")
   expect_true(file.exists(file.path(tmp, "ttv_manifest.csv")))
   expect_true(file.exists(file.path(tmp, "ttv_manifest.rds")))
   expect_true(file.exists(man$path_data[1]))

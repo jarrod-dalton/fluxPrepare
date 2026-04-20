@@ -1,6 +1,6 @@
-# patientSimPrepare
+# fluxPrepare
 
-`patientSimPrepare` constructs **training/test/validation (TTV)** datasets from raw event and observation tables for the **patientSim** ecosystem.
+`fluxPrepare` constructs **training/test/validation (TTV)** datasets from raw event and observation tables for the **flux** ecosystem.
 
 This package is intentionally **spec-first** and **schema-aligned**:
 
@@ -31,7 +31,7 @@ Implementation is tracked in `NEWS.md` and guarded by unit tests:
 
 ```r
 # eval=FALSE
-library(patientSimPrepare)
+library(fluxPrepare)
 
 # 1) Canonicalize inputs
 splits <- prepare_splits(splits)
@@ -52,7 +52,7 @@ ttv_event <- build_ttv_event(
 
 # 3) State reconstruction at anchors
 state_at_t0 <- reconstruct_state_at(
-  anchors = data.frame(patient_id = c("p1"), t0 = c(365)),
+  anchors = data.frame(entity_id = c("p1"), t0 = c(365)),
   observations = obs,
   vars = c("sbp", "ldl"),
   lookback = 365 * 2,

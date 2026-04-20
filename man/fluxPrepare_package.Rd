@@ -1,9 +1,9 @@
-\name{patientSimPrepare-package}
-\alias{patientSimPrepare}
-\alias{patientSimPrepare-package}
-\title{patientSimPrepare: Prepare Training/Test/Validation datasets for patientSim}
+\name{fluxPrepare-package}
+\alias{fluxPrepare}
+\alias{fluxPrepare-package}
+\title{fluxPrepare: Prepare Training/Test/Validation datasets for flux}
 \description{
-Utilities to translate observational event and measurement tables, aligned to a patientSimCore schema,
+Utilities to translate observational event and measurement tables, aligned to a fluxCore schema,
 into reproducible training/test/validation datasets for one-step event and state transition models.
 The package is spec-first and schema-aligned.
 }

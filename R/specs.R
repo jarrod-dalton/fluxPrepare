@@ -42,20 +42,20 @@ spec_state <- function(schema,
   }
 
   # Validate schema and variables up front (Core is authoritative)
-  schema <- patientSimCore::schema_validate(schema)
+  schema <- fluxCore::schema_validate(schema)
   all_vars <- unique(c(outcome_vars, predictor_vars))
-  patientSimCore::schema_assert_vars(schema, all_vars)
+  fluxCore::schema_assert_vars(schema, all_vars)
 
   if (!is.null(derived_vars)) {
     if (!is.character(derived_vars)) stop("spec_state(): derived_vars must be NULL or a character vector.", call. = FALSE)
     derived_vars <- unique(as.character(derived_vars))
-    patientSimCore::schema_assert_vars(schema, derived_vars)
+    fluxCore::schema_assert_vars(schema, derived_vars)
   }
 
   if (!is.null(count_vars)) {
     if (!is.character(count_vars)) stop("spec_state(): count_vars must be NULL or a character vector.", call. = FALSE)
     count_vars <- unique(as.character(count_vars))
-    patientSimCore::schema_assert_vars(schema, count_vars)
+    fluxCore::schema_assert_vars(schema, count_vars)
   }
 
   if (!is.numeric(lookback) || length(lookback) != 1L || is.na(lookback)) {
@@ -112,7 +112,7 @@ spec_state <- function(schema,
     )
   )
 
-  class(spec) <- c("spec_state", "ps_spec")
+  class(spec) <- c("spec_state", "flux_spec")
   spec
 }
 
@@ -167,7 +167,7 @@ spec_event <- function(event_type,
     )
   )
 
-  class(spec) <- c("spec_event", "ps_spec")
+  class(spec) <- c("spec_event", "flux_spec")
   spec
 }
 
@@ -233,9 +233,9 @@ segment_rules_combine <- function(...) {
     }
     for (k in names(r)) {
       if (k %in% c("bins")) {
-        out[[k]] <- modifyList((if (is.null(out[[k]])) list() else out[[k]]), r[[k]])
+        out[[k]] <- utils::modifyList((if (is.null(out[[k]])) list() else out[[k]]), r[[k]])
       } else if (k %in% c("eps", "rel_eps")) {
-        out[[k]] <- modifyList((if (is.null(out[[k]])) list() else out[[k]]), r[[k]])
+        out[[k]] <- utils::modifyList((if (is.null(out[[k]])) list() else out[[k]]), r[[k]])
       } else if (k %in% c("flip")) {
         out[[k]] <- unique(c((if (is.null(out[[k]])) character(0) else out[[k]]), r[[k]]))
       }
@@ -330,7 +330,7 @@ spec_event_process <- function(event_types,
     death_col = death_col
   )
 
-  class(spec) <- c("spec_event_process", "ps_spec")
+  class(spec) <- c("spec_event_process", "flux_spec")
   spec
 }
 
@@ -378,10 +378,10 @@ print.spec_event_process <- function(x, ...) {
 
 
 
-.ps_assert_spec <- function(x, where = "") {
-  if (!inherits(x, "ps_spec")) {
-    msg <- if (nzchar(where)) sprintf("%s: `specs` must contain ps_spec objects (use spec_state()/spec_event()).", where) else
-      "`specs` must contain ps_spec objects (use spec_state()/spec_event())."
+.flux_assert_spec <- function(x, where = "") {
+  if (!inherits(x, "flux_spec")) {
+    msg <- if (nzchar(where)) sprintf("%s: `specs` must contain flux_spec objects (use spec_state()/spec_event()).", where) else
+      "`specs` must contain flux_spec objects (use spec_state()/spec_event())."
     stop(msg, call. = FALSE)
   }
   TRUE

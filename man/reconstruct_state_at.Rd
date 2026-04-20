@@ -1,12 +1,32 @@
 \name{reconstruct_state_at}
 \alias{reconstruct_state_at}
 \title{Reconstruct as-of state at anchor times}
-\usage{reconstruct_state_at(anchors, observations, vars, id_col = "patient_id", time_col = "t0", lookback = Inf, staleness = Inf, keep_provenance = TRUE, row_policy = c("return_all", "drop_incomplete"), derived_vars = NULL, derived_provider = NULL, derived_context = NULL, derived_on_missing = c("na", "error"), keep_derived_provenance = FALSE, count_no_history = c("na", "zero"), count_vars = NULL, ctx = NULL)}
+\usage{
+reconstruct_state_at(
+  anchors,
+  observations,
+  vars,
+  id_col = "entity_id",
+  time_col = "t0",
+  lookback = Inf,
+  staleness = Inf,
+  keep_provenance = TRUE,
+  row_policy = c("return_all", "drop_incomplete"),
+  derived_vars = NULL,
+  derived_provider = NULL,
+  derived_context = NULL,
+  derived_on_missing = c("na", "error"),
+  keep_derived_provenance = FALSE,
+  count_no_history = c("na", "zero"),
+  count_vars = NULL,
+  ctx = NULL
+)
+}
 \arguments{
-\item{anchors}{A data.frame with patient id and anchor time.}
+\item{anchors}{A data.frame with entity id and anchor time.}
 \item{observations}{Canonical observation store from \code{prepare_observations()}.}
 \item{vars}{Character vector of variable names to reconstruct.}
-\item{id_col}{Patient id column in \code{anchors}.}
+\item{id_col}{Entity id column in \code{anchors}.}
 \item{time_col}{Anchor time column in \code{anchors}.}
 \item{lookback}{Numeric lookback window.}
 \item{staleness}{Numeric maximum age; scalar or named per-variable vector.}

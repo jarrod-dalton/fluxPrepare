@@ -25,10 +25,10 @@ test_that("build_ttv_state builds consecutive intervals and reconstructs predict
     keep_provenance = TRUE
   )
 
-  expect_s3_class(out, "ps_ttv_state")
+  expect_s3_class(out, "flux_ttv_state")
   expect_equal(nrow(out), 3)
 
-  # patient a: (0 -> 10), (10 -> 25); patient b: (0 -> 10)
+  # entity a: (0 -> 10), (10 -> 25); entity b: (0 -> 10)
   expect_equal(out$t0, c(0, 10, 0))
   expect_equal(out$t1, c(10, 25, 10))
   expect_equal(out$deltat, c(10, 15, 10))
@@ -58,7 +58,7 @@ test_that("build_ttv_state censors intervals and sets outcomes to NA", {
   specs <- list(bp = list(id_col = "pid", time_col = "time", vars = c("sbp", "dbp"), group = "bp"))
   obs <- prepare_observations(tables, specs)
 
-  followup <- data.frame(patient_id = "a", followup_start = 0, followup_end = 12)
+  followup <- data.frame(entity_id = "a", followup_start = 0, followup_end = 12)
 
   out <- build_ttv_state(
     observations = obs,
@@ -81,7 +81,7 @@ test_that("build_ttv_state censors intervals and sets outcomes to NA", {
   expect_equal(out$sbp.1[1], 130)
 })
 
-test_that("build_ttv_state supports multivariate outcomes and sampling per patient", {
+test_that("build_ttv_state supports multivariate outcomes and sampling per entity", {
   splits <- prepare_splits(
     data.frame(pid = c("a", "b"), split = c("train", "test")),
     id_col = "pid", split_col = "split"
@@ -113,13 +113,13 @@ test_that("build_ttv_state supports multivariate outcomes and sampling per patie
     outcome_group = "bmp",
     outcome_vars = c("glucose", "sodium"),
     predictor_vars = c("sbp"),
-    max_intervals_per_patient = 1,
+    max_intervals_per_entity = 1,
     seed = 123,
     keep_provenance = TRUE
   )
 
   expect_equal(nrow(out), 2)
-  expect_true(all(out$patient_id %in% c("a", "b")))
+  expect_true(all(out$entity_id %in% c("a", "b")))
   expect_true(all(c("glucose", "sodium") %in% names(out)))
 
   # sampling is reproducible
@@ -129,7 +129,7 @@ test_that("build_ttv_state supports multivariate outcomes and sampling per patie
     outcome_group = "bmp",
     outcome_vars = c("glucose", "sodium"),
     predictor_vars = c("sbp"),
-    max_intervals_per_patient = 1,
+    max_intervals_per_entity = 1,
     seed = 123,
     keep_provenance = TRUE
   )

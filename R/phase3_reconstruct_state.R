@@ -1,7 +1,7 @@
 reconstruct_state_at <- function(anchors,
                                    observations,
                                    vars,
-                                   id_col = "patient_id",
+                                   id_col = "entity_id",
                                    time_col = "t0",
                                    lookback = Inf,
                                    staleness = Inf,
@@ -15,39 +15,39 @@ reconstruct_state_at <- function(anchors,
                                    count_no_history = c("na", "zero"),
                                    count_vars = NULL,
                                    ctx = NULL) {
-  .ps_assert_data_frame(anchors, "anchors")
-  .ps_assert_data_frame(observations, "observations")
-  .ps_assert_has_cols(anchors, c(id_col, time_col), "anchors")
-  .ps_assert_has_cols(observations, c("patient_id", "time"), "observations")
+  .flux_assert_data_frame(anchors, "anchors")
+  .flux_assert_data_frame(observations, "observations")
+  .flux_assert_has_cols(anchors, c(id_col, time_col), "anchors")
+  .flux_assert_has_cols(observations, c("entity_id", "time"), "observations")
 
   if (!is.character(vars) || length(vars) < 1L) {
     stop("reconstruct_state_at(): `vars` must be a non-empty character vector.", call. = FALSE)
   }
-  .ps_assert_has_cols(observations, vars, "observations")
+  .flux_assert_has_cols(observations, vars, "observations")
 
   a <- anchors[, c(id_col, time_col)]
-  names(a) <- c("patient_id", "t0")
-  a$patient_id <- as.character(a$patient_id)
+  names(a) <- c("entity_id", "t0")
+  a$entity_id <- as.character(a$entity_id)
   time_spec <- NULL
   if (inherits(a$t0, "Date") || inherits(a$t0, "POSIXt")) {
-    time_spec <- .ps_time_spec_or_stop(ctx, "reconstruct_state_at")
+    time_spec <- .flux_time_spec_or_stop(ctx, "reconstruct_state_at")
   }
-  a$t0 <- .ps_coerce_time_numeric(a$t0, time_spec, "anchors$t0")
-  .ps_assert_time_numeric(a$t0, "anchors$t0")
+  a$t0 <- .flux_coerce_time_numeric(a$t0, time_spec, "anchors$t0")
+  .flux_assert_time_numeric(a$t0, "anchors$t0")
 
-  if (anyNA(a$patient_id) || any(a$patient_id == "")) {
-    stop("reconstruct_state_at(): anchors patient_id contains missing/empty values.", call. = FALSE)
+  if (anyNA(a$entity_id) || any(a$entity_id == "")) {
+    stop("reconstruct_state_at(): anchors entity_id contains missing/empty values.", call. = FALSE)
   }
 
   obs <- observations
-  obs$patient_id <- as.character(obs$patient_id)
+  obs$entity_id <- as.character(obs$entity_id)
     # observations should already be numeric from prepare_observations(),
   # but allow Date/POSIXct here when ctx is provided.
   if (is.null(time_spec) && (inherits(obs$time, "Date") || inherits(obs$time, "POSIXt"))) {
-    time_spec <- .ps_time_spec_or_stop(ctx, "reconstruct_state_at")
+    time_spec <- .flux_time_spec_or_stop(ctx, "reconstruct_state_at")
   }
-  obs$time <- .ps_coerce_time_numeric(obs$time, time_spec, "observations$time")
-  .ps_assert_time_numeric(obs$time, "observations$time")
+  obs$time <- .flux_coerce_time_numeric(obs$time, time_spec, "observations$time")
+  .flux_assert_time_numeric(obs$time, "observations$time")
 
   if (!is.numeric(lookback) || length(lookback) != 1L) {
     stop("reconstruct_state_at(): `lookback` must be a single numeric value.", call. = FALSE)
@@ -56,10 +56,10 @@ reconstruct_state_at <- function(anchors,
     stop("reconstruct_state_at(): `lookback` must be >= 0.", call. = FALSE)
   }
 
-  stal <- .ps_norm_named_numeric(staleness, vars, "staleness")
+  stal <- .flux_norm_named_numeric(staleness, vars, "staleness")
 
-  # deterministic: observations are expected sorted by (patient_id, time, group)
-  obs_by_pid <- split(obs, obs$patient_id)
+  # deterministic: observations are expected sorted by (entity_id, time, group)
+  obs_by_pid <- split(obs, obs$entity_id)
 
   out <- a
   for (v in vars) out[[v]] <- NA
@@ -72,7 +72,7 @@ reconstruct_state_at <- function(anchors,
   }
 
   for (i in seq_len(nrow(a))) {
-    pid <- a$patient_id[[i]]
+    pid <- a$entity_id[[i]]
     t0 <- a$t0[[i]]
 
     o <- obs_by_pid[[pid]]
@@ -131,7 +131,7 @@ reconstruct_state_at <- function(anchors,
   if (!is.null(derived_vars)) {
     out <- add_derived_at(
       state_at = out,
-      anchors = out[, c("patient_id", "t0"), drop = FALSE],
+      anchors = out[, c("entity_id", "t0"), drop = FALSE],
       derived_vars = derived_vars,
       provider = derived_provider,
       context = derived_context,
@@ -150,14 +150,14 @@ reconstruct_state_at <- function(anchors,
   }
 
   rownames(out) <- NULL
-  class(out) <- c("ps_state_asof", class(out))
+  class(out) <- c("flux_state_asof", class(out))
   attr(out, "vars") <- vars
   attr(out, "lookback") <- lookback
   attr(out, "staleness") <- stal
   out
 }
 
-.ps_norm_named_numeric <- function(x, vars, context) {
+.flux_norm_named_numeric <- function(x, vars, context) {
   if (is.null(x) || (length(x) == 1L && isTRUE(is.infinite(x)))) {
     return(stats::setNames(rep(Inf, length(vars)), vars))
   }

@@ -1,7 +1,7 @@
 test_that("prepare_splits enforces uniqueness and allowed labels", {
   df <- data.frame(id = c("a", "b", "c"), split = c("Train", "test", "VALIDATION"))
   out <- prepare_splits(df, id_col = "id", split_col = "split")
-  expect_s3_class(out, "ps_splits")
+  expect_s3_class(out, "flux_splits")
   expect_equal(out$split, c("train", "test", "validation"))
 
   df2 <- rbind(df, data.frame(id = "a", split = "train"))
@@ -11,7 +11,7 @@ test_that("prepare_splits enforces uniqueness and allowed labels", {
 test_that("prepare_events supports single table and list of tables", {
   ev <- data.frame(pid = c("a","a","b"), t = c(2,1,5), type = c("x","x","y"))
   out <- prepare_events(ev, id_col = "pid", time_col = "t", type_col = "type")
-  expect_s3_class(out, "ps_events")
+  expect_s3_class(out, "flux_events")
   expect_equal(out$time, c(1,2,5))
 
   ev1 <- data.frame(pid=c("a","b"), t=c(1,2))
@@ -30,7 +30,7 @@ test_that("prepare_observations binds groups and preserves vars", {
     bmp = list(id_col="pid", time_col="ts", vars=c("glucose"), group="bmp")
   )
   out <- prepare_observations(tables, specs)
-  expect_s3_class(out, "ps_observations")
-  expect_true(all(c("patient_id","time","group","sbp","dbp","glucose") %in% names(out)))
+  expect_s3_class(out, "flux_observations")
+  expect_true(all(c("entity_id","time","group","sbp","dbp","glucose") %in% names(out)))
   expect_equal(out$group, c("bp","bmp","bp"))
 })

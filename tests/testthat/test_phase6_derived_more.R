@@ -3,14 +3,14 @@
 library(testthat)
 
 .build_schema <- function() {
-  schema <- patientSimCore::default_patient_schema()
+  schema <- fluxCore::default_entity_schema()
   schema$sbp <- list(type = "continuous", default = NA_real_, coerce = as.numeric)
   schema
 }
 
 .build_obs <- function() {
   data.frame(
-    patient_id = c("p1", "p1", "p1", "p2"),
+    entity_id = c("p1", "p1", "p1", "p2"),
     time       = c(0, 5, 10, 10),
     group      = c("bp", "bp", "bp", "bp"),
     sbp        = c(120, 130, 115, 140),
@@ -22,7 +22,7 @@ test_that("Phase 6: include_current toggles whether anchor-time observations are
   obs <- .build_obs()
 
   anchors <- data.frame(
-    patient_id = c("p1"),
+    entity_id = c("p1"),
     t0 = c(5),
     stringsAsFactors = FALSE
   )
@@ -30,17 +30,17 @@ test_that("Phase 6: include_current toggles whether anchor-time observations are
   schema <- .build_schema()
 
   derived_fns <- list(
-    n_sbp_12_excl = patientSimCore::derive(
+    n_sbp_12_excl = fluxCore::derive(
       "n_sbp_12_excl",
-      target = patientSimCore::declare_variable("sbp"),
+      target = fluxCore::declare_variable("sbp"),
       lookback_t = 12,
       fn = "count",
       include_current = FALSE,
       force = FALSE
     ),
-    n_sbp_12_incl = patientSimCore::derive(
+    n_sbp_12_incl = fluxCore::derive(
       "n_sbp_12_incl",
-      target = patientSimCore::declare_variable("sbp"),
+      target = fluxCore::declare_variable("sbp"),
       lookback_t = 12,
       fn = "count",
       include_current = TRUE,
@@ -69,11 +69,11 @@ test_that("Phase 6: include_current toggles whether anchor-time observations are
   expect_equal(row$n_sbp_12_incl, 2)
 })
 
-test_that("Phase 6: multiple anchors for same patient do not leak state across anchors", {
+test_that("Phase 6: multiple anchors for same entity do not leak state across anchors", {
   obs <- .build_obs()
 
   anchors <- data.frame(
-    patient_id = c("p1", "p1"),
+    entity_id = c("p1", "p1"),
     t0 = c(5, 10),
     stringsAsFactors = FALSE
   )
@@ -81,16 +81,16 @@ test_that("Phase 6: multiple anchors for same patient do not leak state across a
   schema <- .build_schema()
 
   derived_fns <- list(
-    sbp_lag1 = patientSimCore::lag_of(
+    sbp_lag1 = fluxCore::lag_of(
       "sbp_lag1",
-      patientSimCore::declare_variable("sbp"),
+      fluxCore::declare_variable("sbp"),
       k = 1,
       include_current = FALSE,
       force = TRUE
     ),
-    n_sbp_12 = patientSimCore::derive(
+    n_sbp_12 = fluxCore::derive(
       "n_sbp_12",
-      target = patientSimCore::declare_variable("sbp"),
+      target = fluxCore::declare_variable("sbp"),
       lookback_t = 12,
       fn = "count",
       include_current = FALSE,
@@ -114,8 +114,8 @@ test_that("Phase 6: multiple anchors for same patient do not leak state across a
     count_vars = "n_sbp_12"
   )
 
-  r5  <- out[out$patient_id == "p1" & out$t0 == 5,  , drop = FALSE]
-  r10 <- out[out$patient_id == "p1" & out$t0 == 10, , drop = FALSE]
+  r5  <- out[out$entity_id == "p1" & out$t0 == 5,  , drop = FALSE]
+  r10 <- out[out$entity_id == "p1" & out$t0 == 10, , drop = FALSE]
 
   expect_equal(r5$sbp, 130)
   expect_equal(r5$sbp_lag1, 120)
@@ -130,7 +130,7 @@ test_that("Phase 6: derived_on_missing='error' fails if a derived value is missi
   obs <- .build_obs()
 
   anchors <- data.frame(
-    patient_id = c("p2"),
+    entity_id = c("p2"),
     t0 = c(0),
     stringsAsFactors = FALSE
   )
@@ -138,9 +138,9 @@ test_that("Phase 6: derived_on_missing='error' fails if a derived value is missi
   schema <- .build_schema()
 
   derived_fns <- list(
-    sbp_lag1_nf = patientSimCore::lag_of(
+    sbp_lag1_nf = fluxCore::lag_of(
       "sbp_lag1_nf",
-      patientSimCore::declare_variable("sbp"),
+      fluxCore::declare_variable("sbp"),
       k = 1,
       include_current = FALSE,
       force = FALSE

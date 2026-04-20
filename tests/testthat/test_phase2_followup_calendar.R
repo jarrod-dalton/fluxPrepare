@@ -11,7 +11,7 @@ test_that("build_ttv_event converts followup Date times using ctx$time", {
 
   # Followup in calendar time (Date); maps to numeric days since 1970-01-01.
   followup <- data.frame(
-    patient_id = c("a","b"),
+    entity_id = c("a","b"),
     followup_start = as.Date(c("1970-01-01","1970-01-01")),
     followup_end   = as.Date(c("1970-01-11","1970-01-11"))
   )

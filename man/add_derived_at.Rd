@@ -1,10 +1,22 @@
 \name{add_derived_at}
 \alias{add_derived_at}
 \title{Add derived variables at anchor times}
-\usage{add_derived_at(state_at, anchors, derived_vars, provider, context = list(), derived_on_missing = c("na", "error"), keep_derived_provenance = FALSE, count_no_history = c("na", "zero"), count_vars = NULL)}
+\usage{
+add_derived_at(
+  state_at,
+  anchors,
+  derived_vars,
+  provider,
+  context = list(),
+  derived_on_missing = c("na", "error"),
+  keep_derived_provenance = FALSE,
+  count_no_history = c("na", "zero"),
+  count_vars = NULL
+)
+}
 \arguments{
 \item{state_at}{Data.frame produced by \code{reconstruct_state_at()}.}
-\item{anchors}{Data.frame with \code{patient_id} and \code{t0}.}
+\item{anchors}{Data.frame with \code{entity_id} and \code{t0}.}
 \item{derived_vars}{Character vector of derived variable names to compute.}
 \item{provider}{Derived-variable provider (for example from \code{core_derived_provider()}).}
 \item{context}{List containing at least \code{observations}, and optionally \code{events}.}

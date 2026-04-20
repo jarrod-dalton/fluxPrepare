@@ -1,20 +1,20 @@
-Package: patientSimPrepare
+Package: fluxPrepare
 Type: Package
-Title: Prepare Training/Test/Validation Datasets for patientSim ModelBundles
-Version: 1.4.0
+Title: Prepare Training/Test/Validation Datasets for flux ModelBundles
+Version: 1.5.0
 Authors@R: person(given = "Jarrod",
                   family = "Dalton",
                   role = c("aut", "cre"),
                   email = "daltonj@ccf.org")
-Description: Utilities to translate observational event and measurement tables, aligned to a patientSimCore schema,
+Description: Utilities to translate observational event and measurement tables, aligned to a fluxCore schema,
     into reproducible training/test/validation datasets for one-step event and state transition models intended
-    for use inside patientSim ModelBundles. This package is intentionally spec-first and schema-aligned.
-License: Proprietary
+    for use inside flux ModelBundles. This package is intentionally spec-first and schema-aligned.
+License: LGPL-3
 Encoding: UTF-8
 Imports:
     stats,
     utils,
-    patientSimCore (>= 1.2.5)
+    fluxCore (>= 1.5.0)
 Suggests:
     testthat (>= 3.0.0),
     digest,

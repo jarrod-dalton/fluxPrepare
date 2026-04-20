@@ -8,10 +8,10 @@ build_ttv_event <- function(events,
                                fu_start_col = "followup_start",
                                fu_end_col = "followup_end",
                                death_col = NULL) {
-  .ps_assert_data_frame(events, "events")
-  .ps_assert_data_frame(splits, "splits")
-  .ps_assert_has_cols(events, c("patient_id", "time", "event_type"), "events")
-  .ps_assert_has_cols(splits, c("patient_id", "split"), "splits")
+  .flux_assert_data_frame(events, "events")
+  .flux_assert_data_frame(splits, "splits")
+  .flux_assert_has_cols(events, c("entity_id", "time", "event_type"), "events")
+  .flux_assert_has_cols(splits, c("entity_id", "split"), "splits")
 
   if (!is.character(event_type) || length(event_type) != 1 || is.na(event_type) || event_type == "") {
     stop("build_ttv_event(): event_type must be a non-empty character scalar.", call. = FALSE)
@@ -22,37 +22,37 @@ build_ttv_event <- function(events,
   if (!is.finite(fixed_t0)) stop("build_ttv_event(): fixed_t0 must be finite.", call. = FALSE)
 
   # Normalize splits to character columns
-  splits <- splits[, c("patient_id", "split"), drop = FALSE]
-  splits$patient_id <- as.character(splits$patient_id)
+  splits <- splits[, c("entity_id", "split"), drop = FALSE]
+  splits$entity_id <- as.character(splits$entity_id)
   splits$split <- as.character(splits$split)
 
-  # Restrict events to known patients in splits
-  events <- events[, c("patient_id", "time", "event_type"), drop = FALSE]
-  events$patient_id <- as.character(events$patient_id)
+  # Restrict events to known entities in splits
+  events <- events[, c("entity_id", "time", "event_type"), drop = FALSE]
+  events$entity_id <- as.character(events$entity_id)
   events$event_type <- as.character(events$event_type)
-  events$time <- .ps_coerce_time_numeric(events$time)
-  .ps_assert_time_numeric(events$time, "build_ttv_event(): events$time")
+  events$time <- .flux_coerce_time_numeric(events$time)
+  .flux_assert_time_numeric(events$time, "build_ttv_event(): events$time")
 
   if (anyNA(events$event_type) || any(trimws(events$event_type) == "")) {
     stop("build_ttv_event(): events$event_type contains missing/empty values.", call. = FALSE)
   }
 
   # Compute follow-up start/end if provided
-  fu <- .ps_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, ctx, "build_ttv_event")
+  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, ctx, "build_ttv_event")
 
-  # Patient universe
-  pats <- splits$patient_id
+  # Entity universe
+  pats <- splits$entity_id
 
-  # Determine t0 per patient
+  # Determine t0 per entity
   t0 <- rep(NA_real_, length(pats))
   names(t0) <- pats
 
   if (t0_strategy == "fixed") {
     t0[] <- fixed_t0
   } else {
-    # first observed event time per patient
-    # events may not be sorted; compute min time per patient
-    first_time <- tapply(events$time, events$patient_id, min)
+    # first observed event time per entity
+    # events may not be sorted; compute min time per entity
+    first_time <- tapply(events$time, events$entity_id, min)
 
     if (t0_strategy == "first_event") {
       t0[] <- as.numeric(first_time[pats])
@@ -68,8 +68,8 @@ build_ttv_event <- function(events,
   # Validate t0 exists
   if (anyNA(t0)) {
     bad <- names(t0)[is.na(t0)]
-    stop(sprintf("build_ttv_event(): unable to define t0 for %d patient(s) (missing events and/or follow-up). Example(s): %s",
-                 length(bad), paste0(head(bad, 10), collapse = ", ")), call. = FALSE)
+    stop(sprintf("build_ttv_event(): unable to define t0 for %d entity(s) (missing events and/or follow-up). Example(s): %s",
+                 length(bad), paste0(utils::head(bad, 10), collapse = ", ")), call. = FALSE)
   }
 
   # Censoring time
@@ -78,27 +78,27 @@ build_ttv_event <- function(events,
   if (!is.null(fu)) {
     censor_time[] <- fu$censor_time
   } else {
-    # If no follow-up, censor at max observed event time for patient
-    last_time <- tapply(events$time, events$patient_id, max)
+    # If no follow-up, censor at max observed event time for entity
+    last_time <- tapply(events$time, events$entity_id, max)
     censor_time[] <- as.numeric(last_time[pats])
   }
 
   if (anyNA(censor_time)) {
     bad <- names(censor_time)[is.na(censor_time)]
-    stop(sprintf("build_ttv_event(): unable to define censoring time for %d patient(s). Example(s): %s",
-                 length(bad), paste0(head(bad, 10), collapse = ", ")), call. = FALSE)
+    stop(sprintf("build_ttv_event(): unable to define censoring time for %d entity(s). Example(s): %s",
+                 length(bad), paste0(utils::head(bad, 10), collapse = ", ")), call. = FALSE)
   }
 
-  # Find next event time after t0 for each patient
-  # Approach: filter events to type and time > t0, then take min per patient
+  # Find next event time after t0 for each entity
+  # Approach: filter events to type and time > t0, then take min per entity
   is_target <- events$event_type == event_type
   ev_target <- events[is_target, , drop = FALSE]
 
-  # split by patient (fast enough for phase 2; can optimize later)
+  # split by entity (fast enough for phase 2; can optimize later)
   next_time <- rep(NA_real_, length(pats))
   names(next_time) <- pats
   if (nrow(ev_target) > 0) {
-    ev_split <- split(ev_target$time, ev_target$patient_id)
+    ev_split <- split(ev_target$time, ev_target$entity_id)
     for (pid in intersect(names(ev_split), pats)) {
       tt <- ev_split[[pid]]
       tt <- tt[tt > t0[[pid]]]
@@ -113,15 +113,15 @@ build_ttv_event <- function(events,
   # If censor_time < t0, fail loudly (bad follow-up table or time scale)
   if (any(t1 < t0)) {
     bad <- names(t1)[t1 < t0]
-    stop(sprintf("build_ttv_event(): found %d patient(s) with t1 < t0 (check follow-up bounds/time scale). Example(s): %s",
-                 length(bad), paste0(head(bad, 10), collapse = ", ")), call. = FALSE)
+    stop(sprintf("build_ttv_event(): found %d entity(s) with t1 < t0 (check follow-up bounds/time scale). Example(s): %s",
+                 length(bad), paste0(utils::head(bad, 10), collapse = ", ")), call. = FALSE)
   }
 
   deltat <- t1 - t0
   time_to_event <- deltat
 
   out <- data.frame(
-    patient_id = pats,
+    entity_id = pats,
     split = splits$split,
     t0 = as.numeric(t0),
     t1 = as.numeric(t1),
@@ -145,14 +145,14 @@ build_ttv_event <- function(events,
   )
 
   meta <- list(
-    n_patients = nrow(out),
+    n_entities = nrow(out),
     split_counts = as.list(table(out$split)),
     event_rate = mean(out$event_occurred),
     built_with = "build_ttv_event"
   )
   attr(out, "metadata") <- meta
 
-  class(out) <- c("ps_ttv_event", class(out))
+  class(out) <- c("flux_ttv_event", class(out))
   out
 }
 
@@ -163,53 +163,53 @@ build_ttv_event_process <- function(events,
                                       spec,
                                       followup = NULL,
                                       ctx = NULL) {
-  .ps_assert_data_frame(events, "events")
-  .ps_assert_data_frame(observations, "observations")
-  .ps_assert_data_frame(splits, "splits")
-  .ps_assert_has_cols(events, c("patient_id", "time", "event_type"), "events")
-  .ps_assert_has_cols(observations, c("patient_id", "time", "group"), "observations")
-  .ps_assert_has_cols(splits, c("patient_id", "split"), "splits")
+  .flux_assert_data_frame(events, "events")
+  .flux_assert_data_frame(observations, "observations")
+  .flux_assert_data_frame(splits, "splits")
+  .flux_assert_has_cols(events, c("entity_id", "time", "event_type"), "events")
+  .flux_assert_has_cols(observations, c("entity_id", "time", "group"), "observations")
+  .flux_assert_has_cols(splits, c("entity_id", "split"), "splits")
 
   if (!inherits(spec, "spec_event_process")) {
     stop("build_ttv_event_process(): spec must be a spec_event_process object.", call. = FALSE)
   }
 
   # Normalize splits
-  splits <- splits[, c("patient_id", "split"), drop = FALSE]
-  splits$patient_id <- as.character(splits$patient_id)
+  splits <- splits[, c("entity_id", "split"), drop = FALSE]
+  splits$entity_id <- as.character(splits$entity_id)
   splits$split <- as.character(splits$split)
 
-  pats <- splits$patient_id
+  pats <- splits$entity_id
 
   # Normalize events
-  events <- events[, c("patient_id", "time", "event_type"), drop = FALSE]
-  events$patient_id <- as.character(events$patient_id)
+  events <- events[, c("entity_id", "time", "event_type"), drop = FALSE]
+  events$entity_id <- as.character(events$entity_id)
   events$event_type <- as.character(events$event_type)
-  events$time <- .ps_coerce_time_numeric(events$time)
-  .ps_assert_time_numeric(events$time, "build_ttv_event_process(): events$time")
+  events$time <- .flux_coerce_time_numeric(events$time)
+  .flux_assert_time_numeric(events$time, "build_ttv_event_process(): events$time")
 
   # Normalize observations (keep only required cols + any segmentation vars)
   keep_vars <- character(0)
   if (!is.null(spec$segment_on_vars)) keep_vars <- as.character(spec$segment_on_vars)
-  keep_cols <- unique(c("patient_id", "time", "group", keep_vars))
-  .ps_assert_has_cols(observations, keep_cols, "observations")
+  keep_cols <- unique(c("entity_id", "time", "group", keep_vars))
+  .flux_assert_has_cols(observations, keep_cols, "observations")
   observations <- observations[, keep_cols, drop = FALSE]
-  observations$patient_id <- as.character(observations$patient_id)
+  observations$entity_id <- as.character(observations$entity_id)
   observations$group <- as.character(observations$group)
-  observations$time <- .ps_coerce_time_numeric(observations$time)
-  .ps_assert_time_numeric(observations$time, "build_ttv_event_process(): observations$time")
+  observations$time <- .flux_coerce_time_numeric(observations$time)
+  .flux_assert_time_numeric(observations$time, "build_ttv_event_process(): observations$time")
 
   # Compute follow-up
-  fu <- .ps_prepare_followup(followup, splits, spec$fu_start_col, spec$fu_end_col, spec$death_col, ctx,
+  fu <- .flux_prepare_followup(followup, splits, spec$fu_start_col, spec$fu_end_col, spec$death_col, ctx,
                              "build_ttv_event_process")
 
-  # Determine t0 per patient (same policies as build_ttv_event)
+  # Determine t0 per entity (same policies as build_ttv_event)
   t0 <- rep(NA_real_, length(pats))
   names(t0) <- pats
   if (spec$t0_strategy == "fixed") {
     t0[] <- as.numeric(spec$fixed_t0)
   } else {
-    first_time <- tapply(events$time, events$patient_id, min)
+    first_time <- tapply(events$time, events$entity_id, min)
     if (spec$t0_strategy == "first_event") {
       t0[] <- as.numeric(first_time[pats])
     } else if (spec$t0_strategy == "followup_start") {
@@ -223,8 +223,8 @@ build_ttv_event_process <- function(events,
 
   if (anyNA(t0)) {
     bad <- names(t0)[is.na(t0)]
-    stop(sprintf("build_ttv_event_process(): unable to define t0 for %d patient(s). Example(s): %s",
-                 length(bad), paste0(head(bad, 10), collapse = ", ")), call. = FALSE)
+    stop(sprintf("build_ttv_event_process(): unable to define t0 for %d entity(s). Example(s): %s",
+                 length(bad), paste0(utils::head(bad, 10), collapse = ", ")), call. = FALSE)
   }
 
   # Censoring time
@@ -233,13 +233,13 @@ build_ttv_event_process <- function(events,
   if (!is.null(fu)) {
     censor_time[] <- fu$censor_time
   } else {
-    last_time <- tapply(events$time, events$patient_id, max)
+    last_time <- tapply(events$time, events$entity_id, max)
     censor_time[] <- as.numeric(last_time[pats])
   }
   if (anyNA(censor_time)) {
     bad <- names(censor_time)[is.na(censor_time)]
-    stop(sprintf("build_ttv_event_process(): unable to define censoring time for %d patient(s). Example(s): %s",
-                 length(bad), paste0(head(bad, 10), collapse = ", ")), call. = FALSE)
+    stop(sprintf("build_ttv_event_process(): unable to define censoring time for %d entity(s). Example(s): %s",
+                 length(bad), paste0(utils::head(bad, 10), collapse = ", ")), call. = FALSE)
   }
 
   # Identify next event (any cause in process) after t0
@@ -249,7 +249,7 @@ build_ttv_event_process <- function(events,
   next_time <- rep(NA_real_, length(pats)); names(next_time) <- pats
   next_type <- rep(NA_character_, length(pats)); names(next_type) <- pats
   if (nrow(ev_target) > 0) {
-    ev_split <- split(ev_target, ev_target$patient_id)
+    ev_split <- split(ev_target, ev_target$entity_id)
     for (pid in intersect(names(ev_split), pats)) {
       df <- ev_split[[pid]]
       df <- df[df$time > t0[[pid]], , drop = FALSE]
@@ -266,11 +266,11 @@ build_ttv_event_process <- function(events,
 
   if (any(end_time < t0)) {
     bad <- names(end_time)[end_time < t0]
-    stop(sprintf("build_ttv_event_process(): found %d patient(s) with t1 < t0 (check follow-up bounds/time scale). Example(s): %s",
-                 length(bad), paste0(head(bad, 10), collapse = ", ")), call. = FALSE)
+    stop(sprintf("build_ttv_event_process(): found %d entity(s) with t1 < t0 (check follow-up bounds/time scale). Example(s): %s",
+                 length(bad), paste0(utils::head(bad, 10), collapse = ", ")), call. = FALSE)
   }
 
-  # Pre-split observations by patient for candidate segmentation times
+  # Pre-split observations by entity for candidate segmentation times
   split_groups <- spec$split_on_groups
   seg_vars <- spec$segment_on_vars
   seg_rules <- spec$segment_rules
@@ -281,8 +281,8 @@ build_ttv_event_process <- function(events,
     stop("build_ttv_event_process(): spec$candidate_times must be one of 'groups', 'vars', or 'groups_or_vars'.", call. = FALSE)
   }
 
-  # Pre-split observations by patient for efficient candidate extraction
-  obs_split_all <- split(observations, observations$patient_id)
+  # Pre-split observations by entity for efficient candidate extraction
+  obs_split_all <- split(observations, observations$entity_id)
   min_dt <- as.numeric(spec$min_dt)
 
   rows <- vector("list", length(pats))
@@ -323,7 +323,7 @@ build_ttv_event_process <- function(events,
 
     if (!is.null(seg_vars)) {
       # reconstruct as-of values at baseline and all candidate times for meaningful-change checks
-      anchors <- data.frame(patient_id = rep(pid, 1 + length(cand)), t0 = c(t0p, cand), stringsAsFactors = FALSE)
+      anchors <- data.frame(entity_id = rep(pid, 1 + length(cand)), t0 = c(t0p, cand), stringsAsFactors = FALSE)
       rec <- reconstruct_state_at(anchors = anchors, observations = observations, vars = seg_vars,
                                      keep_provenance = FALSE, ctx = ctx)
       # baseline values
@@ -353,7 +353,7 @@ build_ttv_event_process <- function(events,
               next
             }
 
-            if (!too_close && .ps_is_meaningful_change(old, new, v, seg_rules)) {
+            if (!too_close && .flux_is_meaningful_change(old, new, v, seg_rules)) {
               keep_it <- TRUE
               break
             }
@@ -391,8 +391,8 @@ build_ttv_event_process <- function(events,
     }
 
     rows[[pid]] <- data.frame(
-      patient_id = pid,
-      split = splits$split[splits$patient_id == pid][1],
+      entity_id = pid,
+      split = splits$split[splits$entity_id == pid][1],
       t0 = as.numeric(t0s),
       t1 = as.numeric(t1s),
       deltat = as.numeric(deltat),
@@ -408,16 +408,16 @@ build_ttv_event_process <- function(events,
 
   attr(out, "spec") <- spec
   meta <- list(
-    n_patients = length(unique(out$patient_id)),
+    n_entities = length(unique(out$entity_id)),
     n_rows = nrow(out),
     split_counts = as.list(table(out$split)),
-    event_rate_patients = mean(tapply(out$event_occurred, out$patient_id, any))
+    event_rate_entities = mean(tapply(out$event_occurred, out$entity_id, any))
   )
   attr(out, "metadata") <- meta
   out
 }
 
-.ps_is_meaningful_change <- function(old, new, var, rules) {
+.flux_is_meaningful_change <- function(old, new, var, rules) {
   # Default: any change among non-missing values
   if (is.null(rules)) {
     if (is.na(old) || is.na(new)) return(FALSE)
@@ -475,12 +475,12 @@ build_ttv_event_process <- function(events,
   !identical(old, new)
 }
 
-.ps_prepare_followup <- function(followup, splits, fu_start_col, fu_end_col, death_col, ctx, fn_name) {
+.flux_prepare_followup <- function(followup, splits, fu_start_col, fu_end_col, death_col, ctx, fn_name) {
   if (is.null(followup)) return(NULL)
-  .ps_assert_data_frame(followup, "followup")
-  cols <- c("patient_id", fu_start_col, fu_end_col)
-  .ps_assert_has_cols(followup, cols, "followup")
-  if (!is.null(death_col)) .ps_assert_has_cols(followup, c(death_col), "followup")
+  .flux_assert_data_frame(followup, "followup")
+  cols <- c("entity_id", fu_start_col, fu_end_col)
+  .flux_assert_has_cols(followup, cols, "followup")
+  if (!is.null(death_col)) .flux_assert_has_cols(followup, c(death_col), "followup")
 
   fu <- followup[, cols, drop = FALSE]
 
@@ -489,31 +489,31 @@ time_spec <- NULL
 if (inherits(fu[[fu_start_col]], "Date") || inherits(fu[[fu_start_col]], "POSIXt") ||
     inherits(fu[[fu_end_col]], "Date") || inherits(fu[[fu_end_col]], "POSIXt") ||
     (!is.null(death_col) && (inherits(followup[[death_col]], "Date") || inherits(followup[[death_col]], "POSIXt")))) {
-  time_spec <- .ps_time_spec_or_stop(ctx, fn_name)
+  time_spec <- .flux_time_spec_or_stop(ctx, fn_name)
 }
 
 
   fu_time_class_start <- class(fu[[fu_start_col]])[1]
   fu_time_class_end <- class(fu[[fu_end_col]])[1]
-  names(fu) <- c("patient_id", "fu_start", "fu_end")
-  fu$patient_id <- as.character(fu$patient_id)
-  fu$fu_start <- .ps_coerce_time_numeric(fu$fu_start, time_spec, "followup$fu_start")
+  names(fu) <- c("entity_id", "fu_start", "fu_end")
+  fu$entity_id <- as.character(fu$entity_id)
+  fu$fu_start <- .flux_coerce_time_numeric(fu$fu_start, time_spec, "followup$fu_start")
   if (!fu_time_class_start %in% c("numeric", "integer") || !fu_time_class_end %in% c("numeric", "integer")) {
   }
-  fu$fu_end <- .ps_coerce_time_numeric(fu$fu_end, time_spec, "followup$fu_end")
+  fu$fu_end <- .flux_coerce_time_numeric(fu$fu_end, time_spec, "followup$fu_end")
 
   if (!is.null(death_col)) {
-    fu$death_time <- .ps_coerce_time_numeric(followup[[death_col]], time_spec, "followup$death_time")
+    fu$death_time <- .flux_coerce_time_numeric(followup[[death_col]], time_spec, "followup$death_time")
   } else {
     fu$death_time <- NA_real_
   }
 
   # Join onto splits order
-  idx <- match(splits$patient_id, fu$patient_id)
+  idx <- match(splits$entity_id, fu$entity_id)
   if (anyNA(idx)) {
-    missing <- splits$patient_id[is.na(idx)]
-    stop(sprintf("build_ttv_event(): followup table is missing %d patient(s) from splits. Example(s): %s",
-                 length(missing), paste0(head(missing, 10), collapse = ", ")), call. = FALSE)
+    missing <- splits$entity_id[is.na(idx)]
+    stop(sprintf("build_ttv_event(): followup table is missing %d entity(s) from splits. Example(s): %s",
+                 length(missing), paste0(utils::head(missing, 10), collapse = ", ")), call. = FALSE)
   }
 
   fu <- fu[idx, , drop = FALSE]
@@ -529,7 +529,7 @@ if (inherits(fu[[fu_start_col]], "Date") || inherits(fu[[fu_start_col]], "POSIXt
   }
 
   out <- data.frame(
-    patient_id = fu$patient_id,
+    entity_id = fu$entity_id,
     fu_start = fu$fu_start,
     fu_end = fu$fu_end,
     death_time = as.numeric(fu$death_time),

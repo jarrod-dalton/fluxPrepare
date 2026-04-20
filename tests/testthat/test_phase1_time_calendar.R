@@ -4,7 +4,7 @@ library(testthat)
 test_that("Phase 1: prepare_events converts Date time using ctx$time", {
   ctx <- list(time = list(unit = "weeks", origin = as.Date("1970-01-01"), zone = "UTC"))
   ev <- data.frame(
-    patient_id = c("p1", "p1"),
+    entity_id = c("p1", "p1"),
     time = as.Date(c("1970-01-01", "1970-01-08")),
     event_type = c("a", "b"),
     stringsAsFactors = FALSE
@@ -17,7 +17,7 @@ test_that("Phase 1: prepare_events converts Date time using ctx$time", {
 
 test_that("Phase 1: prepare_events errors on Date time without ctx", {
   ev <- data.frame(
-    patient_id = c("p1", "p1"),
+    entity_id = c("p1", "p1"),
     time = as.Date(c("1970-01-01", "1970-01-08")),
     event_type = c("a", "b"),
     stringsAsFactors = FALSE

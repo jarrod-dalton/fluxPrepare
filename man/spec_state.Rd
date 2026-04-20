@@ -1,9 +1,28 @@
 \name{spec_state}
 \alias{spec_state}
 \title{Construct a validated state-model spec}
-\usage{spec_state(schema, outcome_group, outcome_vars, predictor_vars, name = NULL, lookback = Inf, staleness = Inf, keep_provenance = TRUE, row_policy = c("return_all", "drop_incomplete"), derived_vars = NULL, derived_provider = NULL, derived_context = NULL, derived_on_missing = c("na", "error"), keep_derived_provenance = FALSE, count_no_history = c("na", "zero"), count_vars = NULL)}
+\usage{
+spec_state(
+  schema,
+  outcome_group,
+  outcome_vars,
+  predictor_vars,
+  name = NULL,
+  lookback = Inf,
+  staleness = Inf,
+  keep_provenance = TRUE,
+  row_policy = c("return_all", "drop_incomplete"),
+  derived_vars = NULL,
+  derived_provider = NULL,
+  derived_context = NULL,
+  derived_on_missing = c("na", "error"),
+  keep_derived_provenance = FALSE,
+  count_no_history = c("na", "zero"),
+  count_vars = NULL
+)
+}
 \arguments{
-\item{schema}{A patientSimCore schema (named list).}
+\item{schema}{A fluxCore schema (named list).}
 \item{outcome_group}{Character scalar defining the observation group for interval anchors.}
 \item{outcome_vars}{Character vector of outcome variables.}
 \item{predictor_vars}{Character vector of predictor variables.}
@@ -20,5 +39,5 @@
 \item{count_no_history}{One of \code{"na"} or \code{"zero"}.}
 \item{count_vars}{Optional character vector of count-like variables.}
 }
-\value{A spec object with class \code{c("spec_state", "ps_spec")}.}
-\description{Constructs a classed spec object for one-step state-transition datasets, validated against a patientSimCore schema.}
+\value{A spec object with class \code{c("spec_state", "flux_spec")}.}
+\description{Constructs a classed spec object for one-step state-transition datasets, validated against a fluxCore schema.}

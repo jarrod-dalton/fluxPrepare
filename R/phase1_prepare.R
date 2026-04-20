@@ -1,14 +1,14 @@
 prepare_splits <- function(df,
-                             id_col = "patient_id",
+                             id_col = "entity_id",
                              split_col = "split",
                              allowed = c("train", "test", "validation")) {
-  .ps_assert_data_frame(df, "df")
-  .ps_assert_has_cols(df, c(id_col, split_col), "df")
+  .flux_assert_data_frame(df, "df")
+  .flux_assert_has_cols(df, c(id_col, split_col), "df")
 
   out <- df[, c(id_col, split_col)]
-  names(out) <- c("patient_id", "split")
+  names(out) <- c("entity_id", "split")
 
-  out$patient_id <- as.character(out$patient_id)
+  out$entity_id <- as.character(out$entity_id)
   out$split <- tolower(trimws(as.character(out$split)))
 
   allowed_norm <- tolower(trimws(as.character(allowed)))
@@ -19,35 +19,35 @@ prepare_splits <- function(df,
                  paste0(bad_vals, collapse = ", ")), call. = FALSE)
   }
 
-  if (anyNA(out$patient_id) || any(out$patient_id == "")) {
-    stop("prepare_splits(): patient_id contains missing/empty values.", call. = FALSE)
+  if (anyNA(out$entity_id) || any(out$entity_id == "")) {
+    stop("prepare_splits(): entity_id contains missing/empty values.", call. = FALSE)
   }
 
-  # Enforce uniqueness: one split per patient_id
-  dup <- duplicated(out$patient_id)
+  # Enforce uniqueness: one split per entity_id
+  dup <- duplicated(out$entity_id)
   if (any(dup)) {
-    dups <- unique(out$patient_id[dup])
-    stop(sprintf("prepare_splits(): patient_id has multiple rows (must be unique). Example(s): %s",
-                 paste0(head(dups, 10), collapse = ", ")), call. = FALSE)
+    dups <- unique(out$entity_id[dup])
+    stop(sprintf("prepare_splits(): entity_id has multiple rows (must be unique). Example(s): %s",
+                 paste0(utils::head(dups, 10), collapse = ", ")), call. = FALSE)
   }
 
   rownames(out) <- NULL
-  class(out) <- c("ps_splits", class(out))
+  class(out) <- c("flux_splits", class(out))
   attr(out, "allowed_splits") <- allowed_norm
   out
 }
 
 prepare_events <- function(events,
-                             id_col = "patient_id",
+                             id_col = "entity_id",
                              time_col = "time",
                              type_col = "event_type",
                              table_event_type = NULL,
                              ctx = NULL,
                              sort = TRUE) {
   if (is.data.frame(events)) {
-    .ps_assert_has_cols(events, c(id_col, time_col, type_col), "events")
+    .flux_assert_has_cols(events, c(id_col, time_col, type_col), "events")
     ev <- events[, c(id_col, time_col, type_col)]
-    names(ev) <- c("patient_id", "time", "event_type")
+    names(ev) <- c("entity_id", "time", "event_type")
     ev$source_table <- NA_character_
   } else if (is.list(events) && length(events) > 0 && all(vapply(events, is.data.frame, logical(1)))) {
     if (is.null(names(events)) || any(names(events) == "")) {
@@ -66,9 +66,9 @@ prepare_events <- function(events,
 
     for (i in seq_along(events)) {
       tbl <- events[[i]]
-      .ps_assert_has_cols(tbl, c(id_col, time_col), sprintf("events[['%s']]", nm[[i]]))
+      .flux_assert_has_cols(tbl, c(id_col, time_col), sprintf("events[['%s']]", nm[[i]]))
       tmp <- tbl[, c(id_col, time_col)]
-      names(tmp) <- c("patient_id", "time")
+      names(tmp) <- c("entity_id", "time")
 
       et <- nm[[i]]
       if (!is.null(table_event_type) && et %in% names(table_event_type)) {
@@ -84,7 +84,7 @@ prepare_events <- function(events,
     stop("prepare_events(): `events` must be a data.frame or a named list of data.frames.", call. = FALSE)
   }
 
-  ev$patient_id <- as.character(ev$patient_id)
+  ev$entity_id <- as.character(ev$entity_id)
   ev$event_type <- as.character(ev$event_type)
 
 # Time handling
@@ -92,14 +92,14 @@ time_class <- class(ev$time)[1]
 time_spec <- NULL
 
 if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
-  time_spec <- .ps_time_spec_or_stop(ctx, "prepare_events")
-  ev$time <- patientSimCore::time_to_model(ev$time, time_spec)
+  time_spec <- .flux_time_spec_or_stop(ctx, "prepare_events")
+  ev$time <- fluxCore::time_to_model(ev$time, time_spec)
 } else {
-  ev$time <- .ps_coerce_time_numeric(ev$time)
+  ev$time <- .flux_coerce_time_numeric(ev$time)
 }
 
-  if (anyNA(ev$patient_id) || any(ev$patient_id == "")) {
-    stop("prepare_events(): patient_id contains missing/empty values.", call. = FALSE)
+  if (anyNA(ev$entity_id) || any(ev$entity_id == "")) {
+    stop("prepare_events(): entity_id contains missing/empty values.", call. = FALSE)
   }
   if (anyNA(ev$time)) {
     stop("prepare_events(): time contains missing values after coercion.", call. = FALSE)
@@ -109,12 +109,12 @@ if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
   }
 
   if (isTRUE(sort)) {
-    ord <- order(ev$patient_id, ev$time, ev$event_type)
+    ord <- order(ev$entity_id, ev$time, ev$event_type)
     ev <- ev[ord, , drop = FALSE]
     rownames(ev) <- NULL
   }
 
-  class(ev) <- c("ps_events", class(ev))
+  class(ev) <- c("flux_events", class(ev))
   attr(ev, "time_class") <- time_class
   ev
 }
@@ -172,19 +172,19 @@ prepare_observations <- function(tables,
            call. = FALSE)
     }
 
-    .ps_assert_has_cols(df, unique(c(id_col, time_col, vars)), sprintf("tables[['%s']]", nm))
+    .flux_assert_has_cols(df, unique(c(id_col, time_col, vars)), sprintf("tables[['%s']]", nm))
 
     tmp <- df[, unique(c(id_col, time_col, vars))]
-    names(tmp)[match(id_col, names(tmp))] <- "patient_id"
+    names(tmp)[match(id_col, names(tmp))] <- "entity_id"
     names(tmp)[match(time_col, names(tmp))] <- "time"
 
-    tmp$patient_id <- as.character(tmp$patient_id)
+    tmp$entity_id <- as.character(tmp$entity_id)
     time_classes[[i]] <- class(tmp$time)[1]
     if (inherits(tmp$time, "Date") || inherits(tmp$time, "POSIXt")) {
-      if (is.null(time_spec)) time_spec <- .ps_time_spec_or_stop(ctx, "prepare_observations")
-      tmp$time <- patientSimCore::time_to_model(tmp$time, time_spec)
+      if (is.null(time_spec)) time_spec <- .flux_time_spec_or_stop(ctx, "prepare_observations")
+      tmp$time <- fluxCore::time_to_model(tmp$time, time_spec)
     } else {
-      tmp$time <- .ps_coerce_time_numeric(tmp$time)
+      tmp$time <- .flux_coerce_time_numeric(tmp$time)
     }
 
 
@@ -199,7 +199,7 @@ prepare_observations <- function(tables,
   all_vars <- unique(unlist(lapply(specs[tbl_names], function(sp) sp$vars), use.names = FALSE))
 
   # Establish a stable column order: identifiers first, then declared vars, then optional provenance.
-  keep_cols <- c("patient_id", "time", "group", all_vars)
+  keep_cols <- c("entity_id", "time", "group", all_vars)
   if (isTRUE(keep_source)) keep_cols <- c(keep_cols, "source_table")
 
   # Add missing columns to each table and reorder consistently before binding.
@@ -215,8 +215,8 @@ prepare_observations <- function(tables,
   out <- do.call(rbind, out_list)
 
 
-  if (anyNA(out$patient_id) || any(out$patient_id == "")) {
-    stop("prepare_observations(): patient_id contains missing/empty values.", call. = FALSE)
+  if (anyNA(out$entity_id) || any(out$entity_id == "")) {
+    stop("prepare_observations(): entity_id contains missing/empty values.", call. = FALSE)
   }
   if (anyNA(out$time)) {
     stop("prepare_observations(): time contains missing values after coercion.", call. = FALSE)
@@ -226,17 +226,17 @@ prepare_observations <- function(tables,
   }
 
   if (isTRUE(sort)) {
-    ord <- order(out$patient_id, out$time, out$group)
+    ord <- order(out$entity_id, out$time, out$group)
     out <- out[ord, , drop = FALSE]
     rownames(out) <- NULL
   }
 
-  class(out) <- c("ps_observations", class(out))
+  class(out) <- c("flux_observations", class(out))
   attr(out, "time_classes") <- stats::setNames(time_classes, tbl_names)
   out
 }
 
-.ps_time_spec_or_stop <- function(ctx, fn_name) {
+.flux_time_spec_or_stop <- function(ctx, fn_name) {
   if (is.null(ctx) || !is.list(ctx)) {
     stop(sprintf("%s(): ctx must be provided and must include ctx$time$unit when time columns are Date/POSIXct.", fn_name),
          call. = FALSE)
@@ -246,16 +246,16 @@ prepare_observations <- function(tables,
       length(ctx$time$unit) != 1L || is.na(ctx$time$unit) || ctx$time$unit == "") {
     stop(sprintf("%s(): ctx$time$unit must be set when time columns are Date/POSIXct.", fn_name), call. = FALSE)
   }
-  patientSimCore::time_spec(ctx)
+  fluxCore::time_spec(ctx)
 }
 
 # ---- internal helpers (not exported) ----
 
-.ps_assert_data_frame <- function(x, name) {
+.flux_assert_data_frame <- function(x, name) {
   if (!is.data.frame(x)) stop(sprintf("%s must be a data.frame.", name), call. = FALSE)
 }
 
-.ps_assert_has_cols <- function(df, cols, name) {
+.flux_assert_has_cols <- function(df, cols, name) {
   miss <- setdiff(cols, names(df))
   if (length(miss) > 0) {
     stop(sprintf("%s is missing required column(s): %s", name, paste0(miss, collapse = ", ")),
@@ -263,7 +263,7 @@ prepare_observations <- function(tables,
   }
 }
 
-.ps_assert_time_numeric <- function(x, context = "time") {
+.flux_assert_time_numeric <- function(x, context = "time") {
   if (!is.numeric(x)) {
     stop(sprintf("%s must be numeric after coercion.", context), call. = FALSE)
   }
@@ -274,18 +274,18 @@ prepare_observations <- function(tables,
   invisible(TRUE)
 }
 
-.ps_coerce_time_numeric <- function(x, time_spec = NULL, where = "time") {
+.flux_coerce_time_numeric <- function(x, time_spec = NULL, where = "time") {
   # Numeric remains numeric
   if (is.numeric(x)) {
     return(as.numeric(x))
   }
 
-  # Date/POSIXct must be converted via patientSimCore time helpers
+  # Date/POSIXct must be converted via fluxCore time helpers
   if (inherits(x, "Date") || inherits(x, "POSIXt")) {
     if (is.null(time_spec)) {
       stop(sprintf("%s: calendar times require ctx$time$unit (and optional ctx$time$origin/ctx$time$zone).", where), call. = FALSE)
     }
-    return(patientSimCore::time_to_model(x, time_spec))
+    return(fluxCore::time_to_model(x, time_spec))
   }
 
   # Disallow character/factor time inputs to avoid silent parsing surprises.

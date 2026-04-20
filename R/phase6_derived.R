@@ -4,7 +4,7 @@
 
 core_derived_provider <- function(schema, derived_var_fns) {
   if (!is.list(schema) || is.null(names(schema))) {
-    stop("core_derived_provider(): `schema` must be a named list (patientSimCore schema).", call. = FALSE)
+    stop("core_derived_provider(): `schema` must be a named list (fluxCore schema).", call. = FALSE)
   }
   if (!is.list(derived_var_fns) || length(derived_var_fns) == 0L) {
     stop("core_derived_provider(): `derived_var_fns` must be a non-empty named list of functions.", call. = FALSE)
@@ -20,41 +20,41 @@ core_derived_provider <- function(schema, derived_var_fns) {
   }
 
   provider <- list(
-    name = "patientSimCore",
+    name = "fluxCore",
     schema = schema,
     derived_var_fns = derived_var_fns
   )
 
   provider$compute <- function(state_at, anchors, derived_vars, context = list()) {
-    # state_at: data.frame with patient_id,t0 and reconstructed base vars (not strictly required here)
-    .ps_assert_data_frame(anchors, "anchors")
-    .ps_assert_has_cols(anchors, c("patient_id", "t0"), "anchors")
-    anchors$patient_id <- as.character(anchors$patient_id)
-    anchors$t0 <- .ps_coerce_time_numeric(anchors$t0)
+    # state_at: data.frame with entity_id,t0 and reconstructed base vars (not strictly required here)
+    .flux_assert_data_frame(anchors, "anchors")
+    .flux_assert_has_cols(anchors, c("entity_id", "t0"), "anchors")
+    anchors$entity_id <- as.character(anchors$entity_id)
+    anchors$t0 <- .flux_coerce_time_numeric(anchors$t0)
 
     if (!is.character(derived_vars) || length(derived_vars) < 1L) {
       stop("provider$compute(): `derived_vars` must be a non-empty character vector.", call. = FALSE)
     }
     derived_vars <- unique(as.character(derived_vars))
 
-    # require patientSimCore at runtime (Suggests)
-    if (!requireNamespace("patientSimCore", quietly = TRUE)) {
-      stop("core_derived_provider requires package 'patientSimCore' to be installed.", call. = FALSE)
+    # require fluxCore at runtime (Suggests)
+    if (!requireNamespace("fluxCore", quietly = TRUE)) {
+      stop("core_derived_provider requires package 'fluxCore' to be installed.", call. = FALSE)
     }
 
     obs <- context$observations
     if (is.null(obs)) stop("provider$compute(): context$observations is required.", call. = FALSE)
-    .ps_assert_data_frame(obs, "context$observations")
-    .ps_assert_has_cols(obs, c("patient_id", "time", "group"), "context$observations")
-    obs$patient_id <- as.character(obs$patient_id)
-    obs$time <- .ps_coerce_time_numeric(obs$time)
+    .flux_assert_data_frame(obs, "context$observations")
+    .flux_assert_has_cols(obs, c("entity_id", "time", "group"), "context$observations")
+    obs$entity_id <- as.character(obs$entity_id)
+    obs$time <- .flux_coerce_time_numeric(obs$time)
 
     ev <- context$events
     if (!is.null(ev)) {
-      .ps_assert_data_frame(ev, "context$events")
-      .ps_assert_has_cols(ev, c("patient_id", "time", "event_type"), "context$events")
-      ev$patient_id <- as.character(ev$patient_id)
-      ev$time <- .ps_coerce_time_numeric(ev$time)
+      .flux_assert_data_frame(ev, "context$events")
+      .flux_assert_has_cols(ev, c("entity_id", "time", "event_type"), "context$events")
+      ev$entity_id <- as.character(ev$entity_id)
+      ev$time <- .flux_coerce_time_numeric(ev$time)
       ev$event_type <- as.character(ev$event_type)
     }
 
@@ -67,24 +67,24 @@ core_derived_provider <- function(schema, derived_var_fns) {
     }
     fns <- fns_all[derived_vars]
 
-    # helper: build a minimal Patient from obs/events for one patient
-    build_patient <- function(pid, t0) {
+    # helper: build a minimal Entity from obs/events for one entity
+    build_entity <- function(pid, t0) {
       # IMPORTANT: include anchor-time (time == t0) rows in the reconstructed
-      # Patient history. Whether anchor-time observations contribute to any
+      # Entity history. Whether anchor-time observations contribute to any
       # specific derived variable is controlled by the derived function itself
       # (e.g., include_current = TRUE/FALSE).
-      obs_i <- obs[obs$patient_id == pid & obs$time <= t0, , drop = FALSE]
-      ev_i <- if (!is.null(ev)) ev[ev$patient_id == pid & ev$time <= t0, , drop = FALSE] else NULL
+      obs_i <- obs[obs$entity_id == pid & obs$time <= t0, , drop = FALSE]
+      ev_i <- if (!is.null(ev)) ev[ev$entity_id == pid & ev$time <= t0, , drop = FALSE] else NULL
 
       times <- c(obs_i$time, if (!is.null(ev_i)) ev_i$time, t0)
       times <- times[is.finite(times)]
       time0 <- if (length(times) > 0L) min(times) else t0
 
-      p <- patientSimCore::new_patient(init = list(), schema = provider$schema, time0 = time0)
+      p <- fluxCore::new_entity(init = list(), schema = provider$schema, time0 = time0)
       p$derived_vars <- fns
       p$id <- pid
       # Build observation change map: for each time, merge all rows' non-NA changes
-      change_cols <- setdiff(colnames(obs_i), c("patient_id", "time", "group"))
+      change_cols <- setdiff(colnames(obs_i), c("entity_id", "time", "group"))
       if (length(change_cols) > 0L && nrow(obs_i) > 0L) {
         # order for deterministic merge
         obs_i <- obs_i[order(obs_i$time, obs_i$group), , drop = FALSE]
@@ -131,16 +131,16 @@ core_derived_provider <- function(schema, derived_var_fns) {
     }
 
     # compute derived vars at each anchor
-    out <- anchors[, c("patient_id", "t0"), drop = FALSE]
+    out <- anchors[, c("entity_id", "t0"), drop = FALSE]
     for (dv in derived_vars) out[[dv]] <- NA_real_
 
-    # Do patient-wise for efficiency
-    by_pid <- split(seq_len(nrow(anchors)), anchors$patient_id)
+    # Do entity-wise for efficiency
+    by_pid <- split(seq_len(nrow(anchors)), anchors$entity_id)
     for (pid in names(by_pid)) {
       idx_rows <- by_pid[[pid]]
       for (rr in idx_rows) {
         t0 <- anchors$t0[rr]
-        p <- build_patient(pid, t0)
+        p <- build_entity(pid, t0)
         # snapshot_at_time returns list of base+derived; extract derived
         snap <- p$snapshot_at_time(time = t0)
         for (dv in derived_vars) {
@@ -156,7 +156,7 @@ core_derived_provider <- function(schema, derived_var_fns) {
     out
   }
 
-  class(provider) <- c("ps_derived_provider", "list")
+  class(provider) <- c("flux_derived_provider", "list")
   provider
 }
 
@@ -169,9 +169,9 @@ add_derived_at <- function(state_at,
                               keep_derived_provenance = FALSE,
                               count_no_history = c("na", "zero"),
                               count_vars = NULL) {
-  .ps_assert_data_frame(state_at, "state_at")
-  .ps_assert_data_frame(anchors, "anchors")
-  .ps_assert_has_cols(anchors, c("patient_id", "t0"), "anchors")
+  .flux_assert_data_frame(state_at, "state_at")
+  .flux_assert_data_frame(anchors, "anchors")
+  .flux_assert_has_cols(anchors, c("entity_id", "t0"), "anchors")
 
   if (!is.character(derived_vars) || length(derived_vars) < 1L) {
     stop("add_derived_at(): derived_vars must be a non-empty character vector.", call. = FALSE)
@@ -194,14 +194,14 @@ add_derived_at <- function(state_at,
 
   d <- provider$compute(state_at = state_at, anchors = anchors, derived_vars = derived_vars, context = context)
 
-  .ps_assert_data_frame(d, "derived result")
-  .ps_assert_has_cols(d, c("patient_id", "t0"), "derived result")
+  .flux_assert_data_frame(d, "derived result")
+  .flux_assert_has_cols(d, c("entity_id", "t0"), "derived result")
 
   # Ensure all derived columns exist
   for (dv in derived_vars) {
     if (!dv %in% names(d)) d[[dv]] <- NA_real_
   }
-  d <- d[, c("patient_id", "t0", derived_vars), drop = FALSE]
+  d <- d[, c("entity_id", "t0", derived_vars), drop = FALSE]
 
   # Availability flags (computed pre zero-fill)
   avail <- NULL
@@ -233,11 +233,11 @@ add_derived_at <- function(state_at,
 
   # merge back (preserve row order)
   out <- state_at
-  key_out <- paste(out$patient_id, out$t0)
-  key_d <- paste(d$patient_id, d$t0)
+  key_out <- paste(out$entity_id, out$t0)
+  key_d <- paste(d$entity_id, d$t0)
   mi <- match(key_out, key_d)
 
-  add_cols <- setdiff(names(d), c("patient_id", "t0"))
+  add_cols <- setdiff(names(d), c("entity_id", "t0"))
   for (cc in add_cols) {
     out[[cc]] <- d[[cc]][mi]
   }

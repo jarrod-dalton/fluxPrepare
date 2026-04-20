@@ -2,19 +2,19 @@
 
 test_that("build_ttv_event_process splits at observation times with optional min_dt", {
   events <- data.frame(
-    patient_id = c("p1","p1"),
+    entity_id = c("p1","p1"),
     time = c(36, 200),
     event_type = c("hosp","other"),
     stringsAsFactors = FALSE
   )
   observations <- data.frame(
-    patient_id = rep("p1", 3),
+    entity_id = rep("p1", 3),
     time = c(7, 14, 28),
     group = rep("labs", 3),
     stringsAsFactors = FALSE
   )
-  splits <- data.frame(patient_id = "p1", split = "train", stringsAsFactors = FALSE)
-  followup <- data.frame(patient_id = "p1", followup_start = 0, followup_end = 100, stringsAsFactors = FALSE)
+  splits <- data.frame(entity_id = "p1", split = "train", stringsAsFactors = FALSE)
+  followup <- data.frame(entity_id = "p1", followup_start = 0, followup_end = 100, stringsAsFactors = FALSE)
 
   spec0 <- spec_event_process(
     event_types = c("hosp","mi"),
@@ -47,20 +47,20 @@ test_that("build_ttv_event_process splits at observation times with optional min
 
 test_that("build_ttv_event_process can segment on meaningful covariate changes", {
   events <- data.frame(
-    patient_id = c("p1"),
+    entity_id = c("p1"),
     time = c(36),
     event_type = c("hosp"),
     stringsAsFactors = FALSE
   )
   observations <- data.frame(
-    patient_id = rep("p1", 3),
+    entity_id = rep("p1", 3),
     time = c(7, 14, 28),
     group = rep("labs", 3),
     ldl = c(140, 142, 180),
     stringsAsFactors = FALSE
   )
-  splits <- data.frame(patient_id = "p1", split = "train", stringsAsFactors = FALSE)
-  followup <- data.frame(patient_id = "p1", followup_start = 0, followup_end = 100, stringsAsFactors = FALSE)
+  splits <- data.frame(entity_id = "p1", split = "train", stringsAsFactors = FALSE)
+  followup <- data.frame(entity_id = "p1", followup_start = 0, followup_end = 100, stringsAsFactors = FALSE)
 
   spec <- spec_event_process(
     event_types = c("hosp","mi"),
@@ -83,20 +83,20 @@ test_that("build_ttv_event_process can segment on meaningful covariate changes",
 
 test_that("build_ttv_event_process can generate candidate times from vars without groups", {
   events <- data.frame(
-    patient_id = c("p1"),
+    entity_id = c("p1"),
     time = c(36),
     event_type = c("hosp"),
     stringsAsFactors = FALSE
   )
   observations <- data.frame(
-    patient_id = rep("p1", 3),
+    entity_id = rep("p1", 3),
     time = c(7, 14, 28),
     group = rep("labs", 3),
     ldl = c(140, 142, 180),
     stringsAsFactors = FALSE
   )
-  splits <- data.frame(patient_id = "p1", split = "train", stringsAsFactors = FALSE)
-  followup <- data.frame(patient_id = "p1", followup_start = 0, followup_end = 100, stringsAsFactors = FALSE)
+  splits <- data.frame(entity_id = "p1", split = "train", stringsAsFactors = FALSE)
+  followup <- data.frame(entity_id = "p1", followup_start = 0, followup_end = 100, stringsAsFactors = FALSE)
 
   spec <- spec_event_process(
     event_types = c("hosp","mi"),

@@ -27,13 +27,13 @@ build_ttv_batch <- function(specs,
   if (!requireNamespace("digest", quietly = TRUE)) stop("Package 'digest' is required for batch mode (Suggests).")
   if (!requireNamespace("jsonlite", quietly = TRUE)) stop("Package 'jsonlite' is required for metadata writing (Suggests).")
 
-  chunks <- chunk_patients(splits = splits, chunk = chunk, seed = seed)
+  chunks <- chunk_entities(splits = splits, chunk = chunk, seed = seed)
 
   manifest_rows <- list()
   spec_id <- 0L
 
   for (s in specs) {
-    .ps_assert_spec(s, "build_ttv_batch()")
+    .flux_assert_spec(s, "build_ttv_batch()")
     spec_id <- spec_id + 1L
     spec_name <- if (!is.null(s$name)) as.character(s$name) else NA_character_
     task <- if (!is.null(s$task)) as.character(s$task) else NA_character_
@@ -48,16 +48,16 @@ build_ttv_batch <- function(specs,
     }
     if (!is.list(args)) stop(sprintf("Spec %d: `args` must be a named list.", spec_id))
 
-    spec_hash <- ps_hash_spec(list(task = task, fun = fun, args = args))
+    spec_hash <- flux_hash_spec(list(task = task, fun = fun, args = args))
 
     for (chunk_id in seq_along(chunks)) {
       pat_ids <- chunks[[chunk_id]]
 
       # Filter shared inputs by chunk
-      splits_k <- splits[splits$patient_id %in% pat_ids, , drop = FALSE]
-      events_k <- if (!is.null(events)) events[events$patient_id %in% pat_ids, , drop = FALSE] else NULL
-      obs_k <- if (!is.null(observations)) observations[observations$patient_id %in% pat_ids, , drop = FALSE] else NULL
-      fu_k <- if (!is.null(followup)) followup[followup$patient_id %in% pat_ids, , drop = FALSE] else NULL
+      splits_k <- splits[splits$entity_id %in% pat_ids, , drop = FALSE]
+      events_k <- if (!is.null(events)) events[events$entity_id %in% pat_ids, , drop = FALSE] else NULL
+      obs_k <- if (!is.null(observations)) observations[observations$entity_id %in% pat_ids, , drop = FALSE] else NULL
+      fu_k <- if (!is.null(followup)) followup[followup$entity_id %in% pat_ids, , drop = FALSE] else NULL
 
       # Merge shared args (per-spec overrides win)
       call_args <- args
@@ -101,7 +101,7 @@ build_ttv_batch <- function(specs,
       status <- "ok"
       err <- NA_character_
       n_rows <- NA_integer_
-      n_patients <- NA_integer_
+      n_entities <- NA_integer_
 
       # Skip existing unless overwrite
       if (!overwrite && (file.exists(path_data) || file.exists(path_meta))) {
@@ -115,10 +115,10 @@ build_ttv_batch <- function(specs,
           if (!is.data.frame(data)) stop("Builder did not return a data.frame.")
 
           n_rows <- nrow(data)
-          n_patients <- length(unique(data$patient_id))
+          n_entities <- length(unique(data$entity_id))
 
           # Write dataset
-          ps_write_dataset(data = data, path = path_data, format = format, compress = compress)
+          flux_write_dataset(data = data, path = path_data, format = format, compress = compress)
 
           # Metadata
           meta <- list(
@@ -129,14 +129,14 @@ build_ttv_batch <- function(specs,
             spec_hash = spec_hash,
             chunk_id = chunk_id,
             built_at = as.character(Sys.time()),
-            package = "patientSimPrepare",
-            package_version = as.character(utils::packageVersion("patientSimPrepare")),
+            package = "fluxPrepare",
+            package_version = as.character(utils::packageVersion("fluxPrepare")),
             n_rows = n_rows,
-            n_patients = n_patients,
+            n_entities = n_entities,
             split_counts = as.list(table(splits_k$split)),
             spec = list(task = task, fun = fun, args = args)
           )
-          ps_write_metadata(meta = meta, path = path_meta)
+          flux_write_metadata(meta = meta, path = path_meta)
 
           data
         }, error = function(e) {
@@ -156,10 +156,10 @@ build_ttv_batch <- function(specs,
         chunk_id = chunk_id,
         path_data = path_data,
         path_metadata = path_meta,
-        package_version = as.character(utils::packageVersion("patientSimPrepare")),
+        package_version = as.character(utils::packageVersion("fluxPrepare")),
         built_at = as.character(Sys.time()),
         n_rows = n_rows,
-        n_patients = n_patients,
+        n_entities = n_entities,
         status = status,
         error_message = err,
         stringsAsFactors = FALSE
@@ -168,7 +168,7 @@ build_ttv_batch <- function(specs,
   }
 
   manifest <- do.call(rbind, manifest_rows)
-  class(manifest) <- c("ps_manifest", class(manifest))
+  class(manifest) <- c("flux_manifest", class(manifest))
 
   # Write manifest to disk
   man_csv <- file.path(out_dir, paste0(manifest_name, ".csv"))
@@ -180,11 +180,11 @@ build_ttv_batch <- function(specs,
   manifest
 }
 
-chunk_patients <- function(splits, chunk = list(method = "none", shuffle = TRUE), seed = NULL) {
-  if (is.null(splits) || !is.data.frame(splits) || !"patient_id" %in% names(splits)) {
-    stop("`splits` must be a data.frame with column `patient_id`.")
+chunk_entities <- function(splits, chunk = list(method = "none", shuffle = TRUE), seed = NULL) {
+  if (is.null(splits) || !is.data.frame(splits) || !"entity_id" %in% names(splits)) {
+    stop("`splits` must be a data.frame with column `entity_id`.")
   }
-  ids <- unique(as.character(splits$patient_id))
+  ids <- unique(as.character(splits$entity_id))
 
   # Guard: ensure chunk parameters produce at least one valid chunk.
   n_ids <- length(ids)
@@ -237,17 +237,17 @@ chunk_patients <- function(splits, chunk = list(method = "none", shuffle = TRUE)
   stop("Unknown chunking method. Use 'none', 'n_chunks', 'chunk_size', or 'pct'.")
 }
 
-ps_hash_spec <- function(spec) {
+flux_hash_spec <- function(spec) {
   raw <- serialize(spec, NULL, ascii = FALSE, version = 2)
   digest::digest(raw, algo = "sha256")
 }
 
-ps_write_metadata <- function(meta, path) {
+flux_write_metadata <- function(meta, path) {
   txt <- jsonlite::toJSON(meta, auto_unbox = TRUE, pretty = TRUE, null = "null")
   writeLines(txt, con = path, useBytes = TRUE)
 }
 
-ps_write_dataset <- function(data, path, format, compress = TRUE) {
+flux_write_dataset <- function(data, path, format, compress = TRUE) {
   if (format == "rds") {
     saveRDS(data, path)
     return(invisible(path))

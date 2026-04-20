@@ -6,14 +6,14 @@ test_that("build_ttv_event fails fast on bad event times and event_type", {
   )
 
   # Bad (missing) time in events should error
-  bad_ev_time <- data.frame(patient_id = "a", time = c(1, NA), event_type = c("mi", "mi"))
+  bad_ev_time <- data.frame(entity_id = "a", time = c(1, NA), event_type = c("mi", "mi"))
   expect_error(
     build_ttv_event(bad_ev_time, splits, event_type = "mi"),
     "time"
   )
 
   # Bad (empty) event_type values should error
-  bad_ev_type <- data.frame(patient_id = "a", time = c(1, 2), event_type = c("mi", ""))
+  bad_ev_type <- data.frame(entity_id = "a", time = c(1, 2), event_type = c("mi", ""))
   expect_error(
     build_ttv_event(bad_ev_type, splits, event_type = "mi"),
     "event_type"

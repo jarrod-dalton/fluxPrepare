@@ -8,21 +8,21 @@ test_that("Phase 5: batch manifests + outputs are deterministic for fixed inputs
   dir.create(tmp2)
 
   splits <- data.frame(
-    patient_id = c("p1", "p2"),
+    entity_id = c("p1", "p2"),
     split = c("train", "test"),
     stringsAsFactors = FALSE
   )
   splits <- prepare_splits(splits)
 
   obs_tbl <- data.frame(
-    patient_id = c("p1", "p1", "p2", "p2"),
+    entity_id = c("p1", "p1", "p2", "p2"),
     time = c(0, 10, 0, 10),
     sbp = c(120, 130, 110, 115),
     stringsAsFactors = FALSE
   )
   observations <- prepare_observations(
     tables = list(bp = obs_tbl),
-    specs = list(bp = list(id_col = "patient_id", time_col = "time", vars = c("sbp"), group = "bp"))
+    specs = list(bp = list(id_col = "entity_id", time_col = "time", vars = c("sbp"), group = "bp"))
   )
 
   schema <- list(
@@ -65,7 +65,7 @@ test_that("Phase 5: batch manifests + outputs are deterministic for fixed inputs
   )
 
   # Manifest content should be identical up to directory-specific paths and timestamps.
-  keep <- c("spec_id", "spec_name", "spec_hash", "task", "fun", "chunk_id", "n_rows", "n_patients", "status", "error_message")
+  keep <- c("spec_id", "spec_name", "spec_hash", "task", "fun", "chunk_id", "n_rows", "n_entities", "status", "error_message")
   expect_equal(man1[, keep], man2[, keep])
 
   # Data outputs should be identical.
@@ -73,7 +73,7 @@ test_that("Phase 5: batch manifests + outputs are deterministic for fixed inputs
   d2 <- readRDS(man2$path_data[1])
 
   # Stable ordering for comparison
-  ord_cols <- intersect(c("patient_id", "t0", "t1", "interval_id"), names(d1))
+  ord_cols <- intersect(c("entity_id", "t0", "t1", "interval_id"), names(d1))
   if (length(ord_cols) > 0) {
     o1 <- do.call(order, d1[ord_cols])
     o2 <- do.call(order, d2[ord_cols])

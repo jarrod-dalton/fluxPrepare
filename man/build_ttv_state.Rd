@@ -1,7 +1,33 @@
 \name{build_ttv_state}
 \alias{build_ttv_state}
 \title{Build one-step TTV dataset for a state transition model}
-\usage{build_ttv_state(observations, splits, ctx = NULL, outcome_group, outcome_vars, predictor_vars, followup = NULL, fu_start_col = "followup_start", fu_end_col = "followup_end", death_col = NULL, lookback = Inf, staleness = Inf, keep_provenance = TRUE, row_policy = c("return_all", "drop_incomplete"), derived_vars = NULL, derived_provider = NULL, derived_context = NULL, derived_on_missing = c("na", "error"), keep_derived_provenance = FALSE, count_no_history = c("na", "zero"), count_vars = NULL, max_intervals_per_patient = NULL, seed = NULL)}
+\usage{
+build_ttv_state(
+  observations,
+  splits,
+  ctx = NULL,
+  outcome_group,
+  outcome_vars,
+  predictor_vars,
+  followup = NULL,
+  fu_start_col = "followup_start",
+  fu_end_col = "followup_end",
+  death_col = NULL,
+  lookback = Inf,
+  staleness = Inf,
+  keep_provenance = TRUE,
+  row_policy = c("return_all", "drop_incomplete"),
+  derived_vars = NULL,
+  derived_provider = NULL,
+  derived_context = NULL,
+  derived_on_missing = c("na", "error"),
+  keep_derived_provenance = FALSE,
+  count_no_history = c("na", "zero"),
+  count_vars = NULL,
+  max_intervals_per_entity = NULL,
+  seed = NULL
+)
+}
 \arguments{
 \item{observations}{Canonical observation store from \code{prepare_observations()}.}
 \item{splits}{Canonical split table from \code{prepare_splits()}.}
@@ -24,7 +50,7 @@
 \item{keep_derived_provenance}{Logical; include derived availability columns.}
 \item{count_no_history}{How to handle count-like derived vars with no history: \code{"na"} or \code{"zero"}.}
 \item{count_vars}{Optional count-like derived variables.}
-\item{max_intervals_per_patient}{Optional per-patient cap on sampled intervals.}
+\item{max_intervals_per_entity}{Optional per-entity cap on sampled intervals.}
 \item{seed}{Optional integer seed used when sampling intervals.}
 }
 \value{A data.frame with interval bounds, \code{deltat}, predictors at \code{t0}, outcomes at \code{t1}, and optional provenance.}

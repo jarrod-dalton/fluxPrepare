@@ -19,16 +19,16 @@ build_ttv_state <- function(observations,
                                keep_derived_provenance = FALSE,
                                count_no_history = c("na", "zero"),
                                count_vars = NULL,
-                               max_intervals_per_patient = NULL,
+                               max_intervals_per_entity = NULL,
                                seed = NULL) {
   row_policy <- match.arg(row_policy)
   derived_on_missing <- match.arg(derived_on_missing)
   count_no_history <- match.arg(count_no_history)
 
-  .ps_assert_data_frame(observations, "observations")
-  .ps_assert_data_frame(splits, "splits")
-  .ps_assert_has_cols(observations, c("patient_id", "time", "group"), "observations")
-  .ps_assert_has_cols(splits, c("patient_id", "split"), "splits")
+  .flux_assert_data_frame(observations, "observations")
+  .flux_assert_data_frame(splits, "splits")
+  .flux_assert_has_cols(observations, c("entity_id", "time", "group"), "observations")
+  .flux_assert_has_cols(splits, c("entity_id", "split"), "splits")
 
   if (!is.character(outcome_group) || length(outcome_group) != 1L || is.na(outcome_group) || trimws(outcome_group) == "") {
     stop("build_ttv_state(): outcome_group must be a non-empty character scalar.", call. = FALSE)
@@ -45,16 +45,16 @@ build_ttv_state <- function(observations,
   }
   predictor_vars <- unique(as.character(predictor_vars))
 
-  .ps_assert_has_cols(observations, outcome_vars, "observations")
-  .ps_assert_has_cols(observations, predictor_vars, "observations")
+  .flux_assert_has_cols(observations, outcome_vars, "observations")
+  .flux_assert_has_cols(observations, predictor_vars, "observations")
 
-  if (!is.null(max_intervals_per_patient)) {
-    if (!is.numeric(max_intervals_per_patient) || length(max_intervals_per_patient) != 1L || is.na(max_intervals_per_patient)) {
-      stop("build_ttv_state(): max_intervals_per_patient must be NULL or a single positive integer.", call. = FALSE)
+  if (!is.null(max_intervals_per_entity)) {
+    if (!is.numeric(max_intervals_per_entity) || length(max_intervals_per_entity) != 1L || is.na(max_intervals_per_entity)) {
+      stop("build_ttv_state(): max_intervals_per_entity must be NULL or a single positive integer.", call. = FALSE)
     }
-    max_intervals_per_patient <- as.integer(max_intervals_per_patient)
-    if (max_intervals_per_patient < 1L) {
-      stop("build_ttv_state(): max_intervals_per_patient must be >= 1.", call. = FALSE)
+    max_intervals_per_entity <- as.integer(max_intervals_per_entity)
+    if (max_intervals_per_entity < 1L) {
+      stop("build_ttv_state(): max_intervals_per_entity must be >= 1.", call. = FALSE)
     }
   }
   if (!is.null(seed)) {
@@ -65,45 +65,45 @@ build_ttv_state <- function(observations,
   }
 
   # Normalize splits
-  splits <- splits[, c("patient_id", "split"), drop = FALSE]
-  splits$patient_id <- as.character(splits$patient_id)
+  splits <- splits[, c("entity_id", "split"), drop = FALSE]
+  splits$entity_id <- as.character(splits$entity_id)
   splits$split <- as.character(splits$split)
 
   # Normalize observations
   obs <- observations
-  obs$patient_id <- as.character(obs$patient_id)
+  obs$entity_id <- as.character(obs$entity_id)
   obs$group <- as.character(obs$group)
-  obs$time <- .ps_coerce_time_numeric(obs$time)
-  .ps_assert_time_numeric(obs$time, "build_ttv_state(): observations$time")
+  obs$time <- .flux_coerce_time_numeric(obs$time)
+  .flux_assert_time_numeric(obs$time, "build_ttv_state(): observations$time")
 
-  if (anyNA(obs$patient_id) || any(obs$patient_id == "")) {
-    stop("build_ttv_state(): observations$patient_id contains missing/empty values.", call. = FALSE)
+  if (anyNA(obs$entity_id) || any(obs$entity_id == "")) {
+    stop("build_ttv_state(): observations$entity_id contains missing/empty values.", call. = FALSE)
   }
   if (anyNA(obs$group) || any(obs$group == "")) {
     stop("build_ttv_state(): observations$group contains missing/empty values.", call. = FALSE)
   }
 
-  # Restrict to patients in splits
-  pats <- splits$patient_id
-  obs <- obs[obs$patient_id %in% pats, , drop = FALSE]
+  # Restrict to entities in splits
+  pats <- splits$entity_id
+  obs <- obs[obs$entity_id %in% pats, , drop = FALSE]
 
   # Ensure deterministic ordering
-  ord <- order(obs$patient_id, obs$time, obs$group)
+  ord <- order(obs$entity_id, obs$time, obs$group)
   obs <- obs[ord, , drop = FALSE]
   rownames(obs) <- NULL
 
   # Follow-up (optional)
-  fu <- .ps_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, ctx, "build_ttv_state")
+  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, ctx, "build_ttv_state")
 
   # Build consecutive (t0, t1) intervals from the outcome group observation times
-  obs_out <- obs[obs$group == outcome_group, c("patient_id", "time", outcome_vars), drop = FALSE]
+  obs_out <- obs[obs$group == outcome_group, c("entity_id", "time", outcome_vars), drop = FALSE]
 
   if (nrow(obs_out) == 0L) {
     stop(sprintf("build_ttv_state(): no observations found for outcome_group '%s'.", outcome_group), call. = FALSE)
   }
 
-  # Split outcome observations by patient
-  by_pid <- split(obs_out, obs_out$patient_id)
+  # Split outcome observations by entity
+  by_pid <- split(obs_out, obs_out$entity_id)
 
   interval_rows <- vector("list", length(by_pid))
   names(interval_rows) <- names(by_pid)
@@ -126,7 +126,7 @@ build_ttv_state <- function(observations,
     }
 
     interval_rows[[pid]] <- data.frame(
-      patient_id = rep(pid, length(t0)),
+      entity_id = rep(pid, length(t0)),
       t0 = as.numeric(t0),
       t1_obs = as.numeric(t1_obs),
       t1_row = as.integer(t1_idx),
@@ -136,16 +136,16 @@ build_ttv_state <- function(observations,
 
   intervals <- do.call(rbind, interval_rows)
   if (is.null(intervals) || nrow(intervals) == 0L) {
-    stop(sprintf("build_ttv_state(): insufficient observations to form intervals for outcome_group '%s' (need >=2 per patient).", outcome_group),
+    stop(sprintf("build_ttv_state(): insufficient observations to form intervals for outcome_group '%s' (need >=2 per entity).", outcome_group),
          call. = FALSE)
   }
   rownames(intervals) <- NULL
 
   # Apply follow-up censoring and eligibility
   if (!is.null(fu)) {
-    # Join followup columns onto intervals via patient_id (splits order ensures all patients exist)
+    # Join followup columns onto intervals via entity_id (splits order ensures all entities exist)
     fu_map <- fu
-    idx <- match(intervals$patient_id, fu_map$patient_id)
+    idx <- match(intervals$entity_id, fu_map$entity_id)
     if (anyNA(idx)) {
       stop("build_ttv_state(): internal error matching follow-up to intervals.", call. = FALSE)
     }
@@ -199,17 +199,17 @@ build_ttv_state <- function(observations,
     stop("build_ttv_state(): no positive-length intervals remain after censoring.", call. = FALSE)
   }
 
-  # Optional sampling per patient
-  if (!is.null(max_intervals_per_patient)) {
+  # Optional sampling per entity
+  if (!is.null(max_intervals_per_entity)) {
     if (!is.null(seed)) set.seed(seed)
-    split_int <- split(seq_len(nrow(intervals)), intervals$patient_id)
+    split_int <- split(seq_len(nrow(intervals)), intervals$entity_id)
     keep_idx <- integer(0)
     for (pid in names(split_int)) {
       idxs <- split_int[[pid]]
-      if (length(idxs) <= max_intervals_per_patient) {
+      if (length(idxs) <= max_intervals_per_entity) {
         keep_idx <- c(keep_idx, idxs)
       } else {
-        keep_idx <- c(keep_idx, sample(idxs, size = max_intervals_per_patient, replace = FALSE))
+        keep_idx <- c(keep_idx, sample(idxs, size = max_intervals_per_entity, replace = FALSE))
       }
     }
     keep_idx <- sort(keep_idx)
@@ -218,12 +218,12 @@ build_ttv_state <- function(observations,
   }
 
   # Reconstruct predictors at t0
-  anchors <- data.frame(patient_id = intervals$patient_id, t0 = intervals$t0, stringsAsFactors = FALSE)
+  anchors <- data.frame(entity_id = intervals$entity_id, t0 = intervals$t0, stringsAsFactors = FALSE)
   x <- reconstruct_state_at(
     anchors = anchors,
     observations = obs,
     vars = predictor_vars,
-    id_col = "patient_id",
+    id_col = "entity_id",
     time_col = "t0",
     lookback = lookback,
     staleness = staleness,
@@ -234,13 +234,13 @@ build_ttv_state <- function(observations,
   y_mat <- matrix(NA, nrow = nrow(intervals), ncol = length(outcome_vars))
   colnames(y_mat) <- outcome_vars
 
-  # Build per-patient lookup for pulling t1 outcomes
-  by_pid_full <- split(obs_out, obs_out$patient_id)
+  # Build per-entity lookup for pulling t1 outcomes
+  by_pid_full <- split(obs_out, obs_out$entity_id)
 
   for (i in seq_len(nrow(intervals))) {
     if (isTRUE(intervals$censored[[i]])) next
 
-    pid <- intervals$patient_id[[i]]
+    pid <- intervals$entity_id[[i]]
     t1_obs <- intervals$t1_obs[[i]]
 
     d <- by_pid_full[[pid]]
@@ -261,12 +261,12 @@ build_ttv_state <- function(observations,
 
   # Assemble output
   out <- data.frame(
-    patient_id = intervals$patient_id,
+    entity_id = intervals$entity_id,
     stringsAsFactors = FALSE
   )
 
   # Join split
-  split_idx <- match(out$patient_id, splits$patient_id)
+  split_idx <- match(out$entity_id, splits$entity_id)
   if (anyNA(split_idx)) {
     stop("build_ttv_state(): internal error matching splits to output.", call. = FALSE)
   }
@@ -279,7 +279,7 @@ build_ttv_state <- function(observations,
   out$end_type <- as.character(intervals$end_type)
 
   # Predictors
-  x_keep <- setdiff(names(x), c("patient_id", "t0"))
+  x_keep <- setdiff(names(x), c("entity_id", "t0"))
   out <- cbind(out, x[, x_keep, drop = FALSE])
 
   # Outcomes
@@ -305,19 +305,19 @@ build_ttv_state <- function(observations,
     lookback = lookback,
     staleness = staleness,
     keep_provenance = keep_provenance,
-    max_intervals_per_patient = max_intervals_per_patient,
+    max_intervals_per_entity = max_intervals_per_entity,
     seed = seed
   )
 
   meta <- list(
     n_rows = nrow(out),
-    n_patients = length(unique(out$patient_id)),
+    n_entities = length(unique(out$entity_id)),
     split_counts = as.list(table(out$split)),
     censor_rate = mean(out$censored),
     built_with = "build_ttv_state"
   )
   attr(out, "metadata") <- meta
 
-  class(out) <- c("ps_ttv_state", class(out))
+  class(out) <- c("flux_ttv_state", class(out))
   out
 }
