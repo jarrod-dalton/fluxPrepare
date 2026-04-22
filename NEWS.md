@@ -1,3 +1,9 @@
+## fluxPrepare 1.7.0
+
+- Coordinated ecosystem release alignment to version 1.7.0.
+- Dependency floor updated to `fluxCore (>= 1.7.0)`.
+- No additional functional changes beyond prior 1.5.x documentation/API sync.
+
 ## fluxPrepare 1.5.0
 
 - Release polish pass: check() note cleanup for namespace-qualified utility calls and Rd usage formatting.
