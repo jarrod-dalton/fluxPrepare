@@ -25,7 +25,7 @@ Implementation is tracked in `NEWS.md` and guarded by unit tests:
 4. State-transition TTV datasets
 5. Batch mode + disk-backed outputs
 6. Derived-variable integration at anchors (Core-backed)
-7. Workflow vignette/user guide (docs)
+7. Workflow guidance and examples
 
 ## Quick start (minimal)
 
@@ -71,5 +71,4 @@ ttv_state <- build_ttv_state(
 
 ## Documentation
 
-- `docs/vignette.md` provides an end-to-end workflow narrative (code shown as `eval=FALSE`).
 - `man/*.Rd` contains manually-maintained reference docs (no roxygen).
