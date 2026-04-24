@@ -1,3 +1,9 @@
+## fluxPrepare 1.8.0
+
+- Coordinated ecosystem release alignment to version 1.8.0.
+- Dependency floor updated to `fluxCore (>= 1.8.0)`.
+- Added README release/download badges; no functional Prepare API changes.
+
 ## fluxPrepare 1.7.0
 
 - Coordinated ecosystem release alignment to version 1.7.0.

@@ -1,7 +1,7 @@
 Package: fluxPrepare
 Type: Package
 Title: Prepare Training/Test/Validation Datasets for flux ModelBundles
-Version: 1.7.0
+Version: 1.8.0
 Authors@R: person(given = "Jarrod",
                   family = "Dalton",
                   role = c("aut", "cre"),
@@ -14,7 +14,7 @@ Encoding: UTF-8
 Imports:
     stats,
     utils,
-    fluxCore (>= 1.7.0)
+    fluxCore (>= 1.8.0)
 Suggests:
     testthat (>= 3.0.0),
     digest,
