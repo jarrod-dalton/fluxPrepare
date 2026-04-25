@@ -3,7 +3,7 @@
 library(testthat)
 
 .build_schema <- function() {
-  schema <- fluxCore::default_entity_schema()
+  schema <- test_entity_schema()
   schema$sbp <- list(type = "continuous", default = NA_real_, coerce = as.numeric)
   schema
 }

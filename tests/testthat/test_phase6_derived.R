@@ -15,7 +15,7 @@ test_that("Phase 6: reconstruct_state_at can add Core-derived variables at ancho
     stringsAsFactors = FALSE
   )
 
-  schema <- fluxCore::default_entity_schema()
+  schema <- test_entity_schema()
   schema$sbp <- list(type = "continuous", default = NA_real_, coerce = as.numeric)
 
   derived_fns <- list(

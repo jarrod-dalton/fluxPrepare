@@ -80,7 +80,7 @@ core_derived_provider <- function(schema, derived_var_fns) {
       times <- times[is.finite(times)]
       time0 <- if (length(times) > 0L) min(times) else t0
 
-      p <- fluxCore::new_entity(init = list(), schema = provider$schema, time0 = time0)
+      p <- fluxCore::Entity$new(init = list(), schema = provider$schema, time0 = time0)
       p$derived_vars <- fns
       p$id <- pid
       # Build observation change map: for each time, merge all rows' non-NA changes

@@ -1,3 +1,9 @@
+## fluxPrepare 1.9.0
+
+- Coordinated ecosystem release alignment to version 1.9.0.
+- Tests no longer depend on `fluxCore:::default_entity_schema()`; Prepare test fixtures now define local schema helpers.
+- Dependency floor updated to `fluxCore (>= 1.9.0)`.
+
 ## fluxPrepare 1.8.0
 
 - Coordinated ecosystem release alignment to version 1.8.0.
