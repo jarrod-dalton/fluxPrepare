@@ -16,7 +16,7 @@ test_that("Phase 6: reconstruct_state_at can add Core-derived variables at ancho
   )
 
   schema <- test_entity_schema()
-  schema$sbp <- list(type = "continuous", default = NA_real_, coerce = as.numeric)
+  schema$sbp <- list(type = "numeric", default = NA_real_, coerce = as.numeric, allow_na = TRUE)
 
   derived_fns <- list(
     sbp_lag1 = fluxCore::lag_of("sbp_lag1", fluxCore::declare_variable("sbp"), k = 1, include_current = FALSE, force = TRUE),

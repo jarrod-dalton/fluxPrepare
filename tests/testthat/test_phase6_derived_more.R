@@ -4,7 +4,7 @@ library(testthat)
 
 .build_schema <- function() {
   schema <- test_entity_schema()
-  schema$sbp <- list(type = "continuous", default = NA_real_, coerce = as.numeric)
+  schema$sbp <- list(type = "numeric", default = NA_real_, coerce = as.numeric, allow_na = TRUE)
   schema
 }
 
