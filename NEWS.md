@@ -1,3 +1,9 @@
+## fluxPrepare 1.10.0
+
+- Coordinated ecosystem release alignment to version 1.10.0.
+- Tests updated to use new fluxCore type system with 14 supported types.
+- Dependency floor updated to `fluxCore (>= 1.10.0)`.
+
 ## fluxPrepare 1.9.0
 
 - Coordinated ecosystem release alignment to version 1.9.0.
