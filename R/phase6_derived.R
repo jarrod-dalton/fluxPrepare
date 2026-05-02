@@ -2,6 +2,16 @@
 # Phase 6: Derived-variable integration (Core re-use via provider)
 # ------------------------------------------------------------------------------
 
+#' Create a fluxCore-backed derived-variable provider
+#'
+#' Builds an adapter that reconstructs minimal Core Entity histories and evaluates derived variables at anchor times.
+#'
+#' @param schema A fluxCore schema list.
+#' @param derived_var_fns Named list of fluxCore-compatible derived-variable functions.
+#'
+#' @return A provider object suitable for use with reconstruct_state_at() and build_ttv_state().
+#'
+#' @export
 core_derived_provider <- function(schema, derived_var_fns) {
   if (!is.list(schema) || is.null(names(schema))) {
     stop("core_derived_provider(): `schema` must be a named list (fluxCore schema).", call. = FALSE)
@@ -160,6 +170,23 @@ core_derived_provider <- function(schema, derived_var_fns) {
   provider
 }
 
+#' Add derived variables at anchor times
+#'
+#' Computes and appends derived variables at anchor times using a provider's $compute() method.
+#'
+#' @param state_at Data.frame produced by reconstruct_state_at().
+#' @param anchors Data.frame with entity_id and t0.
+#' @param derived_vars Character vector of derived variable names to compute.
+#' @param provider Derived-variable provider (for example from core_derived_provider()).
+#' @param context List containing at least observations, and optionally events.
+#' @param derived_on_missing "na" to fill missing derived values with NA; "error" to stop.
+#' @param keep_derived_provenance If TRUE, include availability columns for derived vars.
+#' @param count_no_history If "zero", convert NA to 0 for variables in count_vars.
+#' @param count_vars Optional character vector of derived vars treated as count-like.
+#'
+#' @return state_at with derived-variable columns appended.
+#'
+#' @export
 add_derived_at <- function(state_at,
                               anchors,
                               derived_vars,

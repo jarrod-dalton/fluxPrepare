@@ -1,3 +1,15 @@
+#' Prepare an entity-level split table
+#'
+#' Validates and normalizes an entity-level assignment table for train/test/validation splitting. Splits are enforced at the entity level to prevent within-entity leakage.
+#'
+#' @param df A data.frame containing at least entity id and split assignment.
+#' @param id_col Name of the entity id column.
+#' @param split_col Name of the split column.
+#' @param allowed Character vector of allowed split labels (case-insensitive).
+#'
+#' @return A data.frame with columns entity_id and split.
+#'
+#' @export
 prepare_splits <- function(df,
                              id_col = "entity_id",
                              split_col = "split",
@@ -37,6 +49,21 @@ prepare_splits <- function(df,
   out
 }
 
+#' Prepare a canonical event stream
+#'
+#' Normalizes one or more raw event tables into a single canonical event stream for downstream phases.
+#'
+#' @param events Either a data.frame of events, or a named list of event data.frames.
+#' @param id_col Entity id column name (applied to all tables).
+#' @param time_col Time column name (applied to all tables).
+#' @param type_col Event type column name for single-table input. Ignored when events is a list.
+#' @param table_event_type Optional named character vector mapping list element names to event types.
+#' @param ctx Optional model context. Required when times are Date/POSIXct to convert to numeric model time.
+#' @param sort Logical; if TRUE, sort events within entity by time (then event_type).
+#'
+#' @return A data.frame with columns: entity_id, time, event_type, and source_table.
+#'
+#' @export
 prepare_events <- function(events,
                              id_col = "entity_id",
                              time_col = "time",
@@ -119,6 +146,19 @@ if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
   ev
 }
 
+#' Prepare canonical observation tables
+#'
+#' Normalizes a list of wide-ish observational tables into a single canonical observation store.
+#'
+#' @param tables Named list of data.frames.
+#' @param specs Named list describing, for each table, id_col, time_col, vars, and optional group.
+#' @param keep_source Logical; if TRUE, include source_table column.
+#' @param ctx Optional model context. Required when times are Date/POSIXct to convert to numeric model time.
+#' @param sort Logical; if TRUE, sort observations within entity by time (then group).
+#'
+#' @return A data.frame with at least: entity_id, time, group, declared variable columns, and optional source column.
+#'
+#' @export
 prepare_observations <- function(tables,
                                    specs,
                                    keep_source = TRUE,
