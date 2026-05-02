@@ -73,6 +73,12 @@ ttv_state <- build_ttv_state(
 )
 ```
 
-## Documentation
+## Development
 
-- `man/*.Rd` contains manually-maintained reference docs (no roxygen).
+`man/` and `NAMESPACE` are **generated** — do not edit them by hand.
+
+To regenerate after changing roxygen comments in `R/`:
+
+```r
+roxygen2::roxygenise(".")
+```
