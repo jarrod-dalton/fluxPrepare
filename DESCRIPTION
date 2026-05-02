@@ -23,3 +23,5 @@ Suggests:
     arrow
 Author: Jarrod Dalton [aut, cre]
 Maintainer: Jarrod Dalton <daltonj@ccf.org>
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3

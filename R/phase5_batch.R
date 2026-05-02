@@ -1,3 +1,30 @@
+#' Batch-build TTV datasets to disk
+#'
+#' Builds one dataset per spec (and optional entity chunk), writes datasets and metadata to disk, and returns a manifest of outputs.
+#'
+#' @param specs List of spec objects created by spec_state() and/or spec_event().
+#' @param splits Output of prepare_splits().
+#' @param ctx Optional context list passed through to builders.
+#' @param events Canonical event stream from prepare_events() (required for event tasks).
+#' @param observations Canonical observation store from prepare_observations() (required for state tasks).
+#' @param followup Optional follow-up table.
+#' @param out_dir Directory to write outputs.
+#' @param format Output format: "qs", "csv", "parquet", or "rds".
+#' @param overwrite If FALSE, error when output files already exist.
+#' @param seed Optional integer seed used for chunking and sampling.
+#' @param strict If TRUE, stop on first error; if FALSE, continue and record errors in the manifest.
+#' @param compress If TRUE, compress outputs where supported.
+#' @param manifest_name Base filename for manifest outputs.
+#' @param chunk Optional list controlling entity chunking. Supported fields:
+#' method ("none", "n_chunks", "chunk_size", or "pct"),
+#' n_chunks,
+#' chunk_size,
+#' pct,
+#' and shuffle (logical).
+#'
+#' @return A data.frame manifest with class "flux_manifest".
+#'
+#' @export
 build_ttv_batch <- function(specs,
                                splits,
                                ctx = NULL,
@@ -180,6 +207,22 @@ build_ttv_batch <- function(specs,
   manifest
 }
 
+#' Entity chunking helper
+#'
+#' Splits a cohort into deterministic chunks for disk-backed batch building.
+#'
+#' @param splits Split table with entity_id.
+#' @param chunk List of chunking parameters with fields:
+#' method ("none", "n_chunks", "chunk_size", or "pct"),
+#' n_chunks (for "n_chunks"),
+#' chunk_size (for "chunk_size"),
+#' pct (for "pct"),
+#' and optional shuffle (logical, default TRUE).
+#' @param seed Optional seed for reproducible shuffling.
+#'
+#' @return A list of character vectors of entity_id values.
+#'
+#' @export
 chunk_entities <- function(splits, chunk = list(method = "none", shuffle = TRUE), seed = NULL) {
   if (is.null(splits) || !is.data.frame(splits) || !"entity_id" %in% names(splits)) {
     stop("`splits` must be a data.frame with column `entity_id`.")

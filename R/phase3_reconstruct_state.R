@@ -1,3 +1,28 @@
+#' Reconstruct as-of state at anchor times
+#'
+#' Reconstructs requested variables as the most recent observed non-missing values at or before each anchor time, subject to lookback and staleness constraints.
+#'
+#' @param anchors A data.frame with entity id and anchor time.
+#' @param observations Canonical observation store from prepare_observations().
+#' @param vars Character vector of variable names to reconstruct.
+#' @param id_col Entity id column in anchors.
+#' @param time_col Anchor time column in anchors.
+#' @param lookback Numeric lookback window.
+#' @param staleness Numeric maximum age; scalar or named per-variable vector.
+#' @param keep_provenance If TRUE, add per-variable provenance columns.
+#' @param row_policy One of "return_all" or "drop_incomplete".
+#' @param derived_vars Optional derived-variable names to compute at anchors.
+#' @param derived_provider Optional provider required when derived_vars is set.
+#' @param derived_context Optional context list for derived computation.
+#' @param derived_on_missing One of "na" or "error".
+#' @param keep_derived_provenance If TRUE, include derived availability columns.
+#' @param count_no_history How to handle count-like derived vars with no history: "na" or "zero".
+#' @param count_vars Optional subset of derived vars treated as count-like.
+#' @param ctx Optional context used when anchor/observation times are Date/POSIXct.
+#'
+#' @return A data.frame with reconstructed values at anchors and optional provenance columns.
+#'
+#' @export
 reconstruct_state_at <- function(anchors,
                                    observations,
                                    vars,

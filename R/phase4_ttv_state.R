@@ -1,3 +1,34 @@
+#' Build one-step TTV dataset for a state transition model
+#'
+#' Constructs a one-step interval dataset for state-transition modeling using as-of reconstruction at interval start.
+#'
+#' @param observations Canonical observation store from prepare_observations().
+#' @param splits Canonical split table from prepare_splits().
+#' @param ctx Optional context list used for calendar-time follow-up coercion.
+#' @param outcome_group Observation group used to define consecutive anchor intervals.
+#' @param outcome_vars Outcome variable names evaluated at interval end.
+#' @param predictor_vars Predictor variable names reconstructed at interval start.
+#' @param followup Optional follow-up table used to censor intervals.
+#' @param fu_start_col Follow-up start column name in followup.
+#' @param fu_end_col Follow-up end column name in followup.
+#' @param death_col Optional death time column name in followup.
+#' @param lookback Lookback passed to reconstruct_state_at().
+#' @param staleness Staleness passed to reconstruct_state_at().
+#' @param keep_provenance Logical; include reconstruction provenance columns.
+#' @param row_policy One of "return_all" or "drop_incomplete".
+#' @param derived_vars Optional derived variables to compute at anchors.
+#' @param derived_provider Optional derived provider.
+#' @param derived_context Optional context passed to the derived provider.
+#' @param derived_on_missing One of "na" or "error".
+#' @param keep_derived_provenance Logical; include derived availability columns.
+#' @param count_no_history How to handle count-like derived vars with no history: "na" or "zero".
+#' @param count_vars Optional count-like derived variables.
+#' @param max_intervals_per_entity Optional per-entity cap on sampled intervals.
+#' @param seed Optional integer seed used when sampling intervals.
+#'
+#' @return A data.frame with interval bounds, deltat, predictors at t0, outcomes at t1, and optional provenance.
+#'
+#' @export
 build_ttv_state <- function(observations,
                                splits,
                                ctx = NULL,

@@ -1,3 +1,21 @@
+#' Build one-step TTV dataset for an event model
+#'
+#' Constructs a one-step interval dataset for a specified event type with explicit censoring semantics.
+#'
+#' @param events Canonical event stream from prepare_events().
+#' @param splits Canonical split table from prepare_splits().
+#' @param ctx Optional context list used for calendar-time follow-up coercion.
+#' @param event_type Target event type (character scalar).
+#' @param t0_strategy Start-time policy for t0.
+#' @param fixed_t0 Numeric model time used when t0_strategy = "fixed".
+#' @param followup Optional follow-up table used for censoring.
+#' @param fu_start_col Follow-up start column name in followup.
+#' @param fu_end_col Follow-up end column name in followup.
+#' @param death_col Optional death time column name in followup.
+#'
+#' @return A data.frame with columns entity_id, split, t0, t1, deltat, event_occurred, time_to_event, and censoring_time.
+#'
+#' @export
 build_ttv_event <- function(events,
                                splits,
                                ctx = NULL,
@@ -157,6 +175,20 @@ build_ttv_event <- function(events,
 }
 
 
+#' Build start-stop TTV dataset for an event process
+#'
+#' Constructs a counting-process (start-stop) TTV dataset for event-process modeling.
+#'
+#' @param events Canonical event stream from prepare_events().
+#' @param observations Canonical observation store from prepare_observations().
+#' @param splits Canonical split table from prepare_splits().
+#' @param spec A spec_event_process() object.
+#' @param followup Optional follow-up table used for censoring.
+#' @param ctx Optional fluxCore context.
+#'
+#' @return A start-stop data.frame with one or more rows per entity, including interval bounds and terminal event indicators.
+#'
+#' @export
 build_ttv_event_process <- function(events,
                                       observations,
                                       splits,

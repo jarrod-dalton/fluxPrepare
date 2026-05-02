@@ -1,3 +1,27 @@
+#' Construct a validated state-model spec
+#'
+#' Constructs a classed spec object for one-step state-transition datasets, validated against a fluxCore schema.
+#'
+#' @param schema A fluxCore schema (named list).
+#' @param outcome_group Character scalar defining the observation group for interval anchors.
+#' @param outcome_vars Character vector of outcome variables.
+#' @param predictor_vars Character vector of predictor variables.
+#' @param name Optional human-readable name.
+#' @param lookback Lookback window passed to build_ttv_state().
+#' @param staleness Staleness window passed to build_ttv_state().
+#' @param keep_provenance Logical passed to build_ttv_state().
+#' @param row_policy One of "return_all" or "drop_incomplete".
+#' @param derived_vars Optional character vector of derived variable names.
+#' @param derived_provider Optional provider identifier.
+#' @param derived_context Optional list passed through to build_ttv_state().
+#' @param derived_on_missing One of "na" or "error".
+#' @param keep_derived_provenance Logical passed to build_ttv_state().
+#' @param count_no_history One of "na" or "zero".
+#' @param count_vars Optional character vector of count-like variables.
+#'
+#' @return A spec object with class c("spec_state", "flux_spec").
+#'
+#' @export
 spec_state <- function(schema,
                           outcome_group,
                           outcome_vars,
@@ -116,6 +140,21 @@ spec_state <- function(schema,
   spec
 }
 
+#' Construct a validated event-model spec
+#'
+#' Constructs a classed spec object for one-step event-time datasets.
+#'
+#' @param event_type Character scalar specifying the event type to model.
+#' @param name Optional human-readable name.
+#' @param t0_strategy How to define baseline t0.
+#' @param fixed_t0 Numeric scalar used when t0_strategy = "fixed".
+#' @param fu_start_col Follow-up start column name.
+#' @param fu_end_col Follow-up end column name.
+#' @param death_col Optional death time column name.
+#'
+#' @return A spec object with class c("spec_event", "flux_spec").
+#'
+#' @export
 spec_event <- function(event_type,
                           name = NULL,
                           t0_strategy = c("followup_start", "first_event", "fixed"),
@@ -171,6 +210,17 @@ spec_event <- function(event_type,
   spec
 }
 
+#' Segmentation rules from bin cutpoints
+#'
+#' Constructs segmentation rules that trigger interval splitting when a variable
+#' crosses a specified bin boundary.
+#'
+#' @param ... Named numeric vectors of strictly increasing cutpoints, one per variable.
+#' Endpoints may include -Inf and Inf.
+#'
+#' @return A list with class "segment_rules" containing $bins.
+#'
+#' @export
 segment_bins <- function(...) {
   bins <- list(...)
   if (length(bins) == 0L) stop("segment_bins(): supply at least one variable.", call. = FALSE)
@@ -191,6 +241,16 @@ segment_bins <- function(...) {
   out
 }
 
+#' Segmentation rules from absolute-change thresholds
+#'
+#' Constructs segmentation rules that trigger interval splitting when absolute
+#' change in a variable exceeds the provided threshold.
+#'
+#' @param ... Named non-negative numeric thresholds, one per variable.
+#'
+#' @return A list with class "segment_rules" containing $eps.
+#'
+#' @export
 segment_eps <- function(...) {
   eps <- c(...)
   if (length(eps) == 0L) stop("segment_eps(): supply at least one variable.", call. = FALSE)
@@ -202,6 +262,16 @@ segment_eps <- function(...) {
   out
 }
 
+#' Segmentation rules from relative-change thresholds
+#'
+#' Constructs segmentation rules that trigger interval splitting when relative
+#' change in a variable exceeds the provided threshold.
+#'
+#' @param ... Named non-negative numeric relative thresholds, one per variable.
+#'
+#' @return A list with class "segment_rules" containing $rel_eps.
+#'
+#' @export
 segment_rel_eps <- function(...) {
   rel_eps <- c(...)
   if (length(rel_eps) == 0L) stop("segment_rel_eps(): supply at least one variable.", call. = FALSE)
@@ -213,6 +283,16 @@ segment_rel_eps <- function(...) {
   out
 }
 
+#' Segmentation rules from value flips
+#'
+#' Constructs segmentation rules that trigger interval splitting when a monitored
+#' variable changes value between candidate times.
+#'
+#' @param ... One or more variable names to monitor for value changes.
+#'
+#' @return A list with class "segment_rules" containing $flip.
+#'
+#' @export
 segment_flip <- function(...) {
   vars <- unlist(list(...), use.names = FALSE)
   if (!is.character(vars) || length(vars) < 1L || anyNA(vars) || any(trimws(vars) == "")) {
@@ -223,6 +303,16 @@ segment_flip <- function(...) {
   out
 }
 
+#' Combine segmentation rule objects
+#'
+#' Combines multiple segmentation-rule objects into a single rule set. Named rule
+#' entries are merged by variable; flip-variable sets are unioned.
+#'
+#' @param ... One or more objects inheriting from "segment_rules".
+#'
+#' @return A merged "segment_rules" object.
+#'
+#' @export
 segment_rules_combine <- function(...) {
   rules <- list(...)
   if (length(rules) == 0L) stop("segment_rules_combine(): provide at least one rules object.", call. = FALSE)
@@ -246,6 +336,26 @@ segment_rules_combine <- function(...) {
 }
 
 
+#' Construct an event-process spec for start-stop TTV building
+#'
+#' Defines an event process and segmentation policy for constructing counting-process (start-stop) TTV datasets.
+#'
+#' @param event_types Character vector of event types that constitute the process.
+#' @param name Optional human-readable name.
+#' @param split_on_groups Optional observation groups that can trigger interval splitting.
+#' @param segment_on_vars Optional observation variables used for segmentation.
+#' @param segment_rules Optional segmentation rules object/list.
+#' @param candidate_times One of "groups", "vars", or "groups_or_vars".
+#' @param min_dt Minimum spacing between split times (non-negative numeric scalar).
+#' @param t0_strategy How to define t0 for each entity.
+#' @param fixed_t0 Numeric scalar used when t0_strategy = "fixed".
+#' @param fu_start_col Follow-up start column name.
+#' @param fu_end_col Follow-up end column name.
+#' @param death_col Optional death time column name.
+#'
+#' @return A spec object with class c("spec_event_process", "flux_spec").
+#'
+#' @export
 spec_event_process <- function(event_types,
                                   name = NULL,
                                   split_on_groups = NULL,
@@ -337,6 +447,7 @@ spec_event_process <- function(event_types,
 
 
 
+#' @noRd
 print.spec_state <- function(x, ...) {
   cat("<spec_state>
 ")
@@ -355,6 +466,7 @@ print.spec_state <- function(x, ...) {
   invisible(x)
 }
 
+#' @noRd
 print.spec_event <- function(x, ...) {
   cat("<spec_event>
 ")
@@ -365,6 +477,7 @@ print.spec_event <- function(x, ...) {
   invisible(x)
 }
 
+#' @noRd
 print.spec_event_process <- function(x, ...) {
   cat("<spec_event_process>\n")
   if (!is.null(x$name) && nzchar(x$name)) cat("name:           ", x$name, "\n", sep = "")
