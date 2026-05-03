@@ -10,6 +10,7 @@ prepare_events(
   time_col = "time",
   type_col = "event_type",
   table_event_type = NULL,
+  time_spec = NULL,
   ctx = NULL,
   sort = TRUE
 )
@@ -25,7 +26,9 @@ prepare_events(
 
 \item{table_event_type}{Optional named character vector mapping list element names to event types.}
 
-\item{ctx}{Optional model context. Required when times are Date/POSIXct to convert to numeric model time.}
+\item{time_spec}{Optional fluxCore time_spec object. Preferred when times are Date/POSIXct.}
+
+\item{ctx}{Optional compatibility context. Used only when time_spec is not supplied.}
 
 \item{sort}{Logical; if TRUE, sort events within entity by time (then event_type).}
 }

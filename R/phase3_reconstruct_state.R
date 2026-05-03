@@ -7,18 +7,13 @@
 #' @param vars Character vector of variable names to reconstruct.
 #' @param id_col Entity id column in anchors.
 #' @param time_col Anchor time column in anchors.
+#' @param keep_anchor_cols Logical; if TRUE, preserve non-id/non-time anchor columns in the output.
 #' @param lookback Numeric lookback window.
 #' @param staleness Numeric maximum age; scalar or named per-variable vector.
 #' @param keep_provenance If TRUE, add per-variable provenance columns.
 #' @param row_policy One of "return_all" or "drop_incomplete".
-#' @param derived_vars Optional derived-variable names to compute at anchors.
-#' @param derived_provider Optional provider required when derived_vars is set.
-#' @param derived_context Optional context list for derived computation.
-#' @param derived_on_missing One of "na" or "error".
-#' @param keep_derived_provenance If TRUE, include derived availability columns.
-#' @param count_no_history How to handle count-like derived vars with no history: "na" or "zero".
-#' @param count_vars Optional subset of derived vars treated as count-like.
-#' @param ctx Optional context used when anchor/observation times are Date/POSIXct.
+#' @param time_spec Optional fluxCore time_spec object used when anchor/observation times are Date/POSIXct.
+#' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #'
 #' @return A data.frame with reconstructed values at anchors and optional provenance columns.
 #'
@@ -28,36 +23,41 @@ reconstruct_state_at <- function(anchors,
                                    vars,
                                    id_col = "entity_id",
                                    time_col = "t0",
+                                   keep_anchor_cols = FALSE,
                                    lookback = Inf,
                                    staleness = Inf,
                                    keep_provenance = TRUE,
                                    row_policy = c("return_all", "drop_incomplete"),
-                                   derived_vars = NULL,
-                                   derived_provider = NULL,
-                                   derived_context = NULL,
-                                   derived_on_missing = c("na", "error"),
-                                   keep_derived_provenance = FALSE,
-                                   count_no_history = c("na", "zero"),
-                                   count_vars = NULL,
+                                   time_spec = NULL,
                                    ctx = NULL) {
   .flux_assert_data_frame(anchors, "anchors")
   .flux_assert_data_frame(observations, "observations")
   .flux_assert_has_cols(anchors, c(id_col, time_col), "anchors")
   .flux_assert_has_cols(observations, c("entity_id", "time"), "observations")
 
+  if (!is.logical(keep_anchor_cols) || length(keep_anchor_cols) != 1L || is.na(keep_anchor_cols)) {
+    stop("reconstruct_state_at(): keep_anchor_cols must be TRUE/FALSE.", call. = FALSE)
+  }
+  keep_anchor_cols <- isTRUE(keep_anchor_cols)
+
   if (!is.character(vars) || length(vars) < 1L) {
     stop("reconstruct_state_at(): `vars` must be a non-empty character vector.", call. = FALSE)
   }
   .flux_assert_has_cols(observations, vars, "observations")
 
+  anchor_extra <- NULL
   a <- anchors[, c(id_col, time_col)]
   names(a) <- c("entity_id", "t0")
-  a$entity_id <- as.character(a$entity_id)
-  time_spec <- NULL
-  if (inherits(a$t0, "Date") || inherits(a$t0, "POSIXt")) {
-    time_spec <- .flux_time_spec_or_stop(ctx, "reconstruct_state_at")
+  if (isTRUE(keep_anchor_cols)) {
+    extra_cols <- setdiff(names(anchors), c(id_col, time_col))
+    anchor_extra <- anchors[, extra_cols, drop = FALSE]
   }
-  a$t0 <- .flux_coerce_time_numeric(a$t0, time_spec, "anchors$t0")
+  a$entity_id <- as.character(a$entity_id)
+  resolved_time_spec <- time_spec
+  if (inherits(a$t0, "Date") || inherits(a$t0, "POSIXt")) {
+    resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, "reconstruct_state_at")
+  }
+  a$t0 <- .flux_coerce_time_numeric(a$t0, resolved_time_spec, "anchors$t0")
   .flux_assert_time_numeric(a$t0, "anchors$t0")
 
   if (anyNA(a$entity_id) || any(a$entity_id == "")) {
@@ -68,10 +68,10 @@ reconstruct_state_at <- function(anchors,
   obs$entity_id <- as.character(obs$entity_id)
     # observations should already be numeric from prepare_observations(),
   # but allow Date/POSIXct here when ctx is provided.
-  if (is.null(time_spec) && (inherits(obs$time, "Date") || inherits(obs$time, "POSIXt"))) {
-    time_spec <- .flux_time_spec_or_stop(ctx, "reconstruct_state_at")
+  if (is.null(resolved_time_spec) && (inherits(obs$time, "Date") || inherits(obs$time, "POSIXt"))) {
+    resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, "reconstruct_state_at")
   }
-  obs$time <- .flux_coerce_time_numeric(obs$time, time_spec, "observations$time")
+  obs$time <- .flux_coerce_time_numeric(obs$time, resolved_time_spec, "observations$time")
   .flux_assert_time_numeric(obs$time, "observations$time")
 
   if (!is.numeric(lookback) || length(lookback) != 1L) {
@@ -87,6 +87,9 @@ reconstruct_state_at <- function(anchors,
   obs_by_pid <- split(obs, obs$entity_id)
 
   out <- a
+  if (isTRUE(keep_anchor_cols) && !is.null(anchor_extra) && ncol(anchor_extra) > 0L) {
+    out <- cbind(out, anchor_extra, stringsAsFactors = FALSE)
+  }
   for (v in vars) out[[v]] <- NA
 
   if (isTRUE(keep_provenance)) {
@@ -134,43 +137,9 @@ reconstruct_state_at <- function(anchors,
   }
 
   row_policy <- match.arg(row_policy)
-  derived_on_missing <- match.arg(derived_on_missing)
-  count_no_history <- match.arg(count_no_history)
-
-  if (!is.null(derived_vars)) {
-    if (!is.character(derived_vars) || length(derived_vars) < 1L) {
-      stop("reconstruct_state_at(): derived_vars must be NULL or a non-empty character vector.", call. = FALSE)
-    }
-    derived_vars <- unique(as.character(derived_vars))
-    if (is.null(derived_provider)) {
-      stop("reconstruct_state_at(): derived_provider must be provided when derived_vars is not NULL.", call. = FALSE)
-    }
-    if (is.null(derived_context)) {
-      derived_context <- list(observations = observations)
-    } else {
-      if (!is.list(derived_context)) stop("reconstruct_state_at(): derived_context must be NULL or a list.", call. = FALSE)
-      if (is.null(derived_context$observations)) derived_context$observations <- observations
-    }
-  }
-  # Phase 6: optionally add derived variables at anchors via provider (Core re-use).
-  if (!is.null(derived_vars)) {
-    out <- add_derived_at(
-      state_at = out,
-      anchors = out[, c("entity_id", "t0"), drop = FALSE],
-      derived_vars = derived_vars,
-      provider = derived_provider,
-      context = derived_context,
-      derived_on_missing = derived_on_missing,
-      keep_derived_provenance = keep_derived_provenance,
-      count_no_history = count_no_history,
-      count_vars = count_vars
-    )
-  }
 
   if (row_policy == "drop_incomplete") {
-    needed <- c(vars, if (!is.null(derived_vars)) derived_vars else character(0))
-    needed <- unique(needed)
-    keep <- stats::complete.cases(out[, needed, drop = FALSE])
+    keep <- stats::complete.cases(out[, vars, drop = FALSE])
     out <- out[keep, , drop = FALSE]
   }
 

@@ -10,6 +10,7 @@ reconstruct_state_at(
   vars,
   id_col = "entity_id",
   time_col = "t0",
+  keep_anchor_cols = FALSE,
   lookback = Inf,
   staleness = Inf,
   keep_provenance = TRUE,
@@ -21,6 +22,7 @@ reconstruct_state_at(
   keep_derived_provenance = FALSE,
   count_no_history = c("na", "zero"),
   count_vars = NULL,
+  time_spec = NULL,
   ctx = NULL
 )
 }
@@ -34,6 +36,8 @@ reconstruct_state_at(
 \item{id_col}{Entity id column in anchors.}
 
 \item{time_col}{Anchor time column in anchors.}
+
+\item{keep_anchor_cols}{Logical; if TRUE, preserve non-id/non-time anchor columns in the output.}
 
 \item{lookback}{Numeric lookback window.}
 
@@ -57,7 +61,9 @@ reconstruct_state_at(
 
 \item{count_vars}{Optional subset of derived vars treated as count-like.}
 
-\item{ctx}{Optional context used when anchor/observation times are Date/POSIXct.}
+\item{time_spec}{Optional fluxCore time_spec object used when anchor/observation times are Date/POSIXct.}
+
+\item{ctx}{Optional compatibility context used only when time_spec is not supplied.}
 }
 \value{
 A data.frame with reconstructed values at anchors and optional provenance columns.

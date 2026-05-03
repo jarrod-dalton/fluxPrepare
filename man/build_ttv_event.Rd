@@ -7,7 +7,13 @@
 build_ttv_event(
   events,
   splits,
+  time_spec = NULL,
   ctx = NULL,
+  observations = NULL,
+  predictor_vars = NULL,
+  lookback = Inf,
+  staleness = Inf,
+  keep_provenance = TRUE,
   event_type,
   t0_strategy = c("followup_start", "first_event", "fixed"),
   fixed_t0 = 0,
@@ -22,7 +28,19 @@ build_ttv_event(
 
 \item{splits}{Canonical split table from prepare_splits().}
 
-\item{ctx}{Optional context list used for calendar-time follow-up coercion.}
+\item{time_spec}{Optional fluxCore time_spec object used for calendar-time follow-up coercion.}
+
+\item{ctx}{Optional compatibility context used only when time_spec is not supplied.}
+
+\item{observations}{Optional canonical observation store from prepare_observations(). Required when predictor_vars is supplied.}
+
+\item{predictor_vars}{Optional predictor variable names reconstructed at t0.}
+
+\item{lookback}{Lookback passed to reconstruct_state_at() when predictor_vars is supplied.}
+
+\item{staleness}{Staleness passed to reconstruct_state_at() when predictor_vars is supplied.}
+
+\item{keep_provenance}{Logical; include reconstruction provenance columns when predictor_vars is supplied.}
 
 \item{event_type}{Target event type (character scalar).}
 

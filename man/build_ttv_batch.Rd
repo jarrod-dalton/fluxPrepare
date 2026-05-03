@@ -7,6 +7,7 @@
 build_ttv_batch(
   specs,
   splits,
+  time_spec = NULL,
   ctx = NULL,
   events = NULL,
   observations = NULL,
@@ -22,11 +23,14 @@ build_ttv_batch(
 )
 }
 \arguments{
-\item{specs}{List of spec objects created by spec_state() and/or spec_event().}
+\item{specs}{List of spec objects created by spec_state() and/or spec_event().
+\code{spec_decision()} objects are also supported.}
 
 \item{splits}{Output of prepare_splits().}
 
-\item{ctx}{Optional context list passed through to builders.}
+\item{time_spec}{Optional fluxCore time_spec object passed through to builders.}
+
+\item{ctx}{Optional compatibility context passed through when time_spec is not supplied.}
 
 \item{events}{Canonical event stream from prepare_events() (required for event tasks).}
 

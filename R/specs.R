@@ -11,13 +11,6 @@
 #' @param staleness Staleness window passed to build_ttv_state().
 #' @param keep_provenance Logical passed to build_ttv_state().
 #' @param row_policy One of "return_all" or "drop_incomplete".
-#' @param derived_vars Optional character vector of derived variable names.
-#' @param derived_provider Optional provider identifier.
-#' @param derived_context Optional list passed through to build_ttv_state().
-#' @param derived_on_missing One of "na" or "error".
-#' @param keep_derived_provenance Logical passed to build_ttv_state().
-#' @param count_no_history One of "na" or "zero".
-#' @param count_vars Optional character vector of count-like variables.
 #'
 #' @return A spec object with class c("spec_state", "flux_spec").
 #'
@@ -30,18 +23,9 @@ spec_state <- function(schema,
                           lookback = Inf,
                           staleness = Inf,
                           keep_provenance = TRUE,
-                          row_policy = c("return_all", "drop_incomplete"),
-                          derived_vars = NULL,
-                          derived_provider = NULL,
-                          derived_context = NULL,
-                          derived_on_missing = c("na", "error"),
-                          keep_derived_provenance = FALSE,
-                          count_no_history = c("na", "zero"),
-                          count_vars = NULL) {
+                          row_policy = c("return_all", "drop_incomplete")) {
 
   row_policy <- match.arg(row_policy)
-  derived_on_missing <- match.arg(derived_on_missing)
-  count_no_history <- match.arg(count_no_history)
 
   if (!is.character(outcome_group) || length(outcome_group) != 1L || is.na(outcome_group) || trimws(outcome_group) == "") {
     stop("spec_state(): outcome_group must be a non-empty character scalar.", call. = FALSE)
@@ -70,18 +54,6 @@ spec_state <- function(schema,
   all_vars <- unique(c(outcome_vars, predictor_vars))
   fluxCore::schema_assert_vars(schema, all_vars)
 
-  if (!is.null(derived_vars)) {
-    if (!is.character(derived_vars)) stop("spec_state(): derived_vars must be NULL or a character vector.", call. = FALSE)
-    derived_vars <- unique(as.character(derived_vars))
-    fluxCore::schema_assert_vars(schema, derived_vars)
-  }
-
-  if (!is.null(count_vars)) {
-    if (!is.character(count_vars)) stop("spec_state(): count_vars must be NULL or a character vector.", call. = FALSE)
-    count_vars <- unique(as.character(count_vars))
-    fluxCore::schema_assert_vars(schema, count_vars)
-  }
-
   if (!is.numeric(lookback) || length(lookback) != 1L || is.na(lookback)) {
     stop("spec_state(): lookback must be a single numeric value (use Inf for no limit).", call. = FALSE)
   }
@@ -97,22 +69,6 @@ spec_state <- function(schema,
   }
   keep_provenance <- isTRUE(keep_provenance)
 
-  if (!is.null(derived_provider)) {
-    if (!is.character(derived_provider) || length(derived_provider) != 1L || is.na(derived_provider) || trimws(derived_provider) == "") {
-      stop("spec_state(): derived_provider must be NULL or a non-empty character scalar.", call. = FALSE)
-    }
-    derived_provider <- as.character(derived_provider)
-  }
-
-  if (!is.null(derived_context) && !is.list(derived_context)) {
-    stop("spec_state(): derived_context must be NULL or a list.", call. = FALSE)
-  }
-
-  if (!is.logical(keep_derived_provenance) || length(keep_derived_provenance) != 1L || is.na(keep_derived_provenance)) {
-    stop("spec_state(): keep_derived_provenance must be TRUE/FALSE.", call. = FALSE)
-  }
-  keep_derived_provenance <- isTRUE(keep_derived_provenance)
-
   spec <- list(
     name = name,
     task = "state",
@@ -125,14 +81,7 @@ spec_state <- function(schema,
       lookback = lookback,
       staleness = staleness,
       keep_provenance = keep_provenance,
-      row_policy = row_policy,
-      derived_vars = derived_vars,
-      derived_provider = derived_provider,
-      derived_context = derived_context,
-      derived_on_missing = derived_on_missing,
-      keep_derived_provenance = keep_derived_provenance,
-      count_no_history = count_no_history,
-      count_vars = count_vars
+      row_policy = row_policy
     )
   )
 
@@ -151,6 +100,10 @@ spec_state <- function(schema,
 #' @param fu_start_col Follow-up start column name.
 #' @param fu_end_col Follow-up end column name.
 #' @param death_col Optional death time column name.
+#' @param predictor_vars Optional character vector of predictor variables reconstructed at t0.
+#' @param lookback Lookback passed to build_ttv_event() when predictor_vars is supplied.
+#' @param staleness Staleness passed to build_ttv_event() when predictor_vars is supplied.
+#' @param keep_provenance Logical passed to build_ttv_event() when predictor_vars is supplied.
 #'
 #' @return A spec object with class c("spec_event", "flux_spec").
 #'
@@ -161,7 +114,11 @@ spec_event <- function(event_type,
                           fixed_t0 = 0,
                           fu_start_col = "followup_start",
                           fu_end_col = "followup_end",
-                          death_col = NULL) {
+                          death_col = NULL,
+                          predictor_vars = NULL,
+                          lookback = Inf,
+                          staleness = Inf,
+                          keep_provenance = TRUE) {
 
   if (!is.character(event_type) || length(event_type) != 1L || is.na(event_type) || trimws(event_type) == "") {
     stop("spec_event(): event_type must be a non-empty character scalar.", call. = FALSE)
@@ -192,6 +149,28 @@ spec_event <- function(event_type,
     death_col <- as.character(death_col)
   }
 
+  if (!is.null(predictor_vars)) {
+    if (!is.character(predictor_vars) || length(predictor_vars) < 1L) {
+      stop("spec_event(): predictor_vars must be NULL or a non-empty character vector.", call. = FALSE)
+    }
+    predictor_vars <- unique(as.character(predictor_vars))
+  }
+
+  if (!is.numeric(lookback) || length(lookback) != 1L || is.na(lookback)) {
+    stop("spec_event(): lookback must be a single numeric value (use Inf for no limit).", call. = FALSE)
+  }
+  lookback <- as.numeric(lookback)
+
+  if (!is.numeric(staleness) || length(staleness) != 1L || is.na(staleness)) {
+    stop("spec_event(): staleness must be a single numeric value (use Inf for no limit).", call. = FALSE)
+  }
+  staleness <- as.numeric(staleness)
+
+  if (!is.logical(keep_provenance) || length(keep_provenance) != 1L || is.na(keep_provenance)) {
+    stop("spec_event(): keep_provenance must be TRUE/FALSE.", call. = FALSE)
+  }
+  keep_provenance <- isTRUE(keep_provenance)
+
   spec <- list(
     name = name,
     task = "event",
@@ -202,11 +181,98 @@ spec_event <- function(event_type,
       fixed_t0 = fixed_t0,
       fu_start_col = fu_start_col,
       fu_end_col = fu_end_col,
-      death_col = death_col
+      death_col = death_col,
+      predictor_vars = predictor_vars,
+      lookback = lookback,
+      staleness = staleness,
+      keep_provenance = keep_provenance
     )
   )
 
   class(spec) <- c("spec_event", "flux_spec")
+  spec
+}
+
+#' Construct a validated decision-model spec
+#'
+#' Constructs a classed spec object for decision-point datasets built from
+#' decision anchors plus reconstructed state at decision time.
+#'
+#' @param predictor_vars Character vector of predictor variables reconstructed at decision time.
+#' @param name Optional human-readable name.
+#' @param decision_point_col Decision point identifier column in the decisions table.
+#' @param carry_cols Optional additional decision columns to preserve.
+#' @param lookback Lookback passed to build_ttv_decision().
+#' @param staleness Staleness passed to build_ttv_decision().
+#' @param keep_provenance Logical passed to build_ttv_decision().
+#' @param row_policy One of "return_all" or "drop_incomplete".
+#'
+#' @return A spec object with class c("spec_decision", "flux_spec").
+#'
+#' @export
+spec_decision <- function(predictor_vars,
+                          name = NULL,
+                          decision_point_col = "decision_point_id",
+                          carry_cols = NULL,
+                          lookback = Inf,
+                          staleness = Inf,
+                          keep_provenance = TRUE,
+                          row_policy = c("return_all", "drop_incomplete")) {
+  row_policy <- match.arg(row_policy)
+
+  if (!is.character(predictor_vars) || length(predictor_vars) < 1L) {
+    stop("spec_decision(): predictor_vars must be a non-empty character vector.", call. = FALSE)
+  }
+  predictor_vars <- unique(as.character(predictor_vars))
+
+  if (!is.null(name)) {
+    if (!is.character(name) || length(name) != 1L || is.na(name) || trimws(name) == "") {
+      stop("spec_decision(): name must be NULL or a non-empty character scalar.", call. = FALSE)
+    }
+    name <- as.character(name)
+  }
+
+  if (!is.character(decision_point_col) || length(decision_point_col) != 1L || is.na(decision_point_col) || trimws(decision_point_col) == "") {
+    stop("spec_decision(): decision_point_col must be a non-empty character scalar.", call. = FALSE)
+  }
+  decision_point_col <- as.character(decision_point_col)
+
+  if (!is.null(carry_cols)) {
+    if (!is.character(carry_cols)) stop("spec_decision(): carry_cols must be NULL or a character vector.", call. = FALSE)
+    carry_cols <- unique(as.character(carry_cols))
+  }
+
+  if (!is.numeric(lookback) || length(lookback) != 1L || is.na(lookback)) {
+    stop("spec_decision(): lookback must be a single numeric value (use Inf for no limit).", call. = FALSE)
+  }
+  lookback <- as.numeric(lookback)
+
+  if (!is.numeric(staleness) || length(staleness) != 1L || is.na(staleness)) {
+    stop("spec_decision(): staleness must be a single numeric value (use Inf for no limit).", call. = FALSE)
+  }
+  staleness <- as.numeric(staleness)
+
+  if (!is.logical(keep_provenance) || length(keep_provenance) != 1L || is.na(keep_provenance)) {
+    stop("spec_decision(): keep_provenance must be TRUE/FALSE.", call. = FALSE)
+  }
+  keep_provenance <- isTRUE(keep_provenance)
+
+  spec <- list(
+    name = name,
+    task = "decision",
+    fun = "build_ttv_decision",
+    args = list(
+      predictor_vars = predictor_vars,
+      decision_point_col = decision_point_col,
+      carry_cols = carry_cols,
+      lookback = lookback,
+      staleness = staleness,
+      keep_provenance = keep_provenance,
+      row_policy = row_policy
+    )
+  )
+
+  class(spec) <- c("spec_decision", "flux_spec")
   spec
 }
 
@@ -478,6 +544,15 @@ print.spec_event <- function(x, ...) {
 }
 
 #' @noRd
+print.spec_decision <- function(x, ...) {
+  cat("<spec_decision>\n")
+  if (!is.null(x$name) && nzchar(x$name)) cat("name:              ", x$name, "\n", sep = "")
+  cat("predictor_vars:    ", paste(x$args$predictor_vars, collapse = ", "), "\n", sep = "")
+  cat("decision_point_col:", x$args$decision_point_col, "\n", sep = "")
+  invisible(x)
+}
+
+#' @noRd
 print.spec_event_process <- function(x, ...) {
   cat("<spec_event_process>\n")
   if (!is.null(x$name) && nzchar(x$name)) cat("name:           ", x$name, "\n", sep = "")
@@ -493,8 +568,8 @@ print.spec_event_process <- function(x, ...) {
 
 .flux_assert_spec <- function(x, where = "") {
   if (!inherits(x, "flux_spec")) {
-    msg <- if (nzchar(where)) sprintf("%s: `specs` must contain flux_spec objects (use spec_state()/spec_event()).", where) else
-      "`specs` must contain flux_spec objects (use spec_state()/spec_event())."
+    msg <- if (nzchar(where)) sprintf("%s: `specs` must contain flux_spec objects (use spec_state()/spec_event()/spec_decision()).", where) else
+      "`specs` must contain flux_spec objects (use spec_state()/spec_event()/spec_decision())."
     stop(msg, call. = FALSE)
   }
   TRUE

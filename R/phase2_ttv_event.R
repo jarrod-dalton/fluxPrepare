@@ -4,7 +4,13 @@
 #'
 #' @param events Canonical event stream from prepare_events().
 #' @param splits Canonical split table from prepare_splits().
-#' @param ctx Optional context list used for calendar-time follow-up coercion.
+#' @param time_spec Optional fluxCore time_spec object used for calendar-time follow-up coercion.
+#' @param ctx Optional compatibility context used only when time_spec is not supplied.
+#' @param observations Optional canonical observation store from prepare_observations(). Required when predictor_vars is supplied.
+#' @param predictor_vars Optional predictor variable names reconstructed at t0.
+#' @param lookback Lookback passed to reconstruct_state_at() when predictor_vars is supplied.
+#' @param staleness Staleness passed to reconstruct_state_at() when predictor_vars is supplied.
+#' @param keep_provenance Logical; include reconstruction provenance columns when predictor_vars is supplied.
 #' @param event_type Target event type (character scalar).
 #' @param t0_strategy Start-time policy for t0.
 #' @param fixed_t0 Numeric model time used when t0_strategy = "fixed".
@@ -18,7 +24,13 @@
 #' @export
 build_ttv_event <- function(events,
                                splits,
+                               time_spec = NULL,
                                ctx = NULL,
+                               observations = NULL,
+                               predictor_vars = NULL,
+                               lookback = Inf,
+                               staleness = Inf,
+                               keep_provenance = TRUE,
                                event_type,
                                t0_strategy = c("followup_start", "first_event", "fixed"),
                                fixed_t0 = 0,
@@ -34,6 +46,33 @@ build_ttv_event <- function(events,
   if (!is.character(event_type) || length(event_type) != 1 || is.na(event_type) || event_type == "") {
     stop("build_ttv_event(): event_type must be a non-empty character scalar.", call. = FALSE)
   }
+
+  if (!is.null(predictor_vars)) {
+    if (!is.character(predictor_vars) || length(predictor_vars) < 1L) {
+      stop("build_ttv_event(): predictor_vars must be NULL or a non-empty character vector.", call. = FALSE)
+    }
+    predictor_vars <- unique(as.character(predictor_vars))
+    if (is.null(observations)) {
+      stop("build_ttv_event(): observations must be provided when predictor_vars is supplied.", call. = FALSE)
+    }
+    .flux_assert_data_frame(observations, "observations")
+    .flux_assert_has_cols(observations, c("entity_id", "time", predictor_vars), "observations")
+  }
+
+  if (!is.numeric(lookback) || length(lookback) != 1L || is.na(lookback)) {
+    stop("build_ttv_event(): lookback must be a single numeric value.", call. = FALSE)
+  }
+  lookback <- as.numeric(lookback)
+
+  if (!is.numeric(staleness) || length(staleness) != 1L || is.na(staleness)) {
+    stop("build_ttv_event(): staleness must be a single numeric value.", call. = FALSE)
+  }
+  staleness <- as.numeric(staleness)
+
+  if (!is.logical(keep_provenance) || length(keep_provenance) != 1L || is.na(keep_provenance)) {
+    stop("build_ttv_event(): keep_provenance must be TRUE/FALSE.", call. = FALSE)
+  }
+  keep_provenance <- isTRUE(keep_provenance)
 
   t0_strategy <- match.arg(t0_strategy)
   fixed_t0 <- as.numeric(fixed_t0)
@@ -56,7 +95,7 @@ build_ttv_event <- function(events,
   }
 
   # Compute follow-up start/end if provided
-  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, ctx, "build_ttv_event")
+  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, time_spec, ctx, "build_ttv_event")
 
   # Entity universe
   pats <- splits$entity_id
@@ -150,6 +189,28 @@ build_ttv_event <- function(events,
     stringsAsFactors = FALSE
   )
 
+  if (!is.null(predictor_vars)) {
+    obs <- observations
+    obs$entity_id <- as.character(obs$entity_id)
+    obs$time <- .flux_coerce_time_numeric(obs$time)
+    .flux_assert_time_numeric(obs$time, "build_ttv_event(): observations$time")
+
+    anchors <- data.frame(entity_id = out$entity_id, t0 = out$t0, stringsAsFactors = FALSE)
+    x <- reconstruct_state_at(
+      anchors = anchors,
+      observations = obs,
+      vars = predictor_vars,
+      id_col = "entity_id",
+      time_col = "t0",
+      lookback = lookback,
+      staleness = staleness,
+      keep_provenance = keep_provenance
+    )
+
+    x_keep <- setdiff(names(x), c("entity_id", "t0"))
+    out <- cbind(out, x[, x_keep, drop = FALSE])
+  }
+
   # Attach spec + metadata
   attr(out, "spec") <- list(
     task = "event",
@@ -159,7 +220,11 @@ build_ttv_event <- function(events,
     followup = !is.null(followup),
     fu_start_col = fu_start_col,
     fu_end_col = fu_end_col,
-    death_col = death_col
+    death_col = death_col,
+    predictor_vars = predictor_vars,
+    lookback = lookback,
+    staleness = staleness,
+    keep_provenance = keep_provenance
   )
 
   meta <- list(
@@ -184,7 +249,8 @@ build_ttv_event <- function(events,
 #' @param splits Canonical split table from prepare_splits().
 #' @param spec A spec_event_process() object.
 #' @param followup Optional follow-up table used for censoring.
-#' @param ctx Optional fluxCore context.
+#' @param time_spec Optional fluxCore time_spec object used for calendar-time follow-up coercion.
+#' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #'
 #' @return A start-stop data.frame with one or more rows per entity, including interval bounds and terminal event indicators.
 #'
@@ -194,6 +260,7 @@ build_ttv_event_process <- function(events,
                                       splits,
                                       spec,
                                       followup = NULL,
+                                      time_spec = NULL,
                                       ctx = NULL) {
   .flux_assert_data_frame(events, "events")
   .flux_assert_data_frame(observations, "observations")
@@ -232,7 +299,7 @@ build_ttv_event_process <- function(events,
   .flux_assert_time_numeric(observations$time, "build_ttv_event_process(): observations$time")
 
   # Compute follow-up
-  fu <- .flux_prepare_followup(followup, splits, spec$fu_start_col, spec$fu_end_col, spec$death_col, ctx,
+  fu <- .flux_prepare_followup(followup, splits, spec$fu_start_col, spec$fu_end_col, spec$death_col, time_spec, ctx,
                              "build_ttv_event_process")
 
   # Determine t0 per entity (same policies as build_ttv_event)
@@ -507,7 +574,7 @@ build_ttv_event_process <- function(events,
   !identical(old, new)
 }
 
-.flux_prepare_followup <- function(followup, splits, fu_start_col, fu_end_col, death_col, ctx, fn_name) {
+.flux_prepare_followup <- function(followup, splits, fu_start_col, fu_end_col, death_col, time_spec, ctx, fn_name) {
   if (is.null(followup)) return(NULL)
   .flux_assert_data_frame(followup, "followup")
   cols <- c("entity_id", fu_start_col, fu_end_col)
@@ -517,11 +584,11 @@ build_ttv_event_process <- function(events,
   fu <- followup[, cols, drop = FALSE]
 
 # Time handling: followup_start/followup_end/death_time may be numeric, Date, or POSIXct.
-time_spec <- NULL
+resolved_time_spec <- time_spec
 if (inherits(fu[[fu_start_col]], "Date") || inherits(fu[[fu_start_col]], "POSIXt") ||
     inherits(fu[[fu_end_col]], "Date") || inherits(fu[[fu_end_col]], "POSIXt") ||
     (!is.null(death_col) && (inherits(followup[[death_col]], "Date") || inherits(followup[[death_col]], "POSIXt")))) {
-  time_spec <- .flux_time_spec_or_stop(ctx, fn_name)
+  resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, fn_name)
 }
 
 
@@ -529,13 +596,13 @@ if (inherits(fu[[fu_start_col]], "Date") || inherits(fu[[fu_start_col]], "POSIXt
   fu_time_class_end <- class(fu[[fu_end_col]])[1]
   names(fu) <- c("entity_id", "fu_start", "fu_end")
   fu$entity_id <- as.character(fu$entity_id)
-  fu$fu_start <- .flux_coerce_time_numeric(fu$fu_start, time_spec, "followup$fu_start")
+  fu$fu_start <- .flux_coerce_time_numeric(fu$fu_start, resolved_time_spec, "followup$fu_start")
   if (!fu_time_class_start %in% c("numeric", "integer") || !fu_time_class_end %in% c("numeric", "integer")) {
   }
-  fu$fu_end <- .flux_coerce_time_numeric(fu$fu_end, time_spec, "followup$fu_end")
+  fu$fu_end <- .flux_coerce_time_numeric(fu$fu_end, resolved_time_spec, "followup$fu_end")
 
   if (!is.null(death_col)) {
-    fu$death_time <- .flux_coerce_time_numeric(followup[[death_col]], time_spec, "followup$death_time")
+    fu$death_time <- .flux_coerce_time_numeric(followup[[death_col]], resolved_time_spec, "followup$death_time")
   } else {
     fu$death_time <- NA_real_
   }

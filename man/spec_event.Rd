@@ -11,7 +11,11 @@ spec_event(
   fixed_t0 = 0,
   fu_start_col = "followup_start",
   fu_end_col = "followup_end",
-  death_col = NULL
+  death_col = NULL,
+  predictor_vars = NULL,
+  lookback = Inf,
+  staleness = Inf,
+  keep_provenance = TRUE
 )
 }
 \arguments{
@@ -28,6 +32,14 @@ spec_event(
 \item{fu_end_col}{Follow-up end column name.}
 
 \item{death_col}{Optional death time column name.}
+
+\item{predictor_vars}{Optional character vector of predictor variables reconstructed at t0.}
+
+\item{lookback}{Lookback passed to build_ttv_event() when predictor_vars is supplied.}
+
+\item{staleness}{Staleness passed to build_ttv_event() when predictor_vars is supplied.}
+
+\item{keep_provenance}{Logical passed to build_ttv_event() when predictor_vars is supplied.}
 }
 \value{
 A spec object with class c("spec_event", "flux_spec").

@@ -7,6 +7,7 @@
 build_ttv_state(
   observations,
   splits,
+  time_spec = NULL,
   ctx = NULL,
   outcome_group,
   outcome_vars,
@@ -35,7 +36,9 @@ build_ttv_state(
 
 \item{splits}{Canonical split table from prepare_splits().}
 
-\item{ctx}{Optional context list used for calendar-time follow-up coercion.}
+\item{time_spec}{Optional fluxCore time_spec object used for calendar-time follow-up coercion.}
+
+\item{ctx}{Optional compatibility context used only when time_spec is not supplied.}
 
 \item{outcome_group}{Observation group used to define consecutive anchor intervals.}
 

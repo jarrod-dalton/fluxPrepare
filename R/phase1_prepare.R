@@ -58,7 +58,8 @@ prepare_splits <- function(df,
 #' @param time_col Time column name (applied to all tables).
 #' @param type_col Event type column name for single-table input. Ignored when events is a list.
 #' @param table_event_type Optional named character vector mapping list element names to event types.
-#' @param ctx Optional model context. Required when times are Date/POSIXct to convert to numeric model time.
+#' @param time_spec Optional fluxCore time_spec object. Preferred when times are Date/POSIXct.
+#' @param ctx Optional compatibility context. Used only when time_spec is not supplied.
 #' @param sort Logical; if TRUE, sort events within entity by time (then event_type).
 #'
 #' @return A data.frame with columns: entity_id, time, event_type, and source_table.
@@ -69,6 +70,7 @@ prepare_events <- function(events,
                              time_col = "time",
                              type_col = "event_type",
                              table_event_type = NULL,
+                             time_spec = NULL,
                              ctx = NULL,
                              sort = TRUE) {
   if (is.data.frame(events)) {
@@ -116,11 +118,11 @@ prepare_events <- function(events,
 
 # Time handling
 time_class <- class(ev$time)[1]
-time_spec <- NULL
+resolved_time_spec <- time_spec
 
 if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
-  time_spec <- .flux_time_spec_or_stop(ctx, "prepare_events")
-  ev$time <- fluxCore::time_to_model(ev$time, time_spec)
+  resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, "prepare_events")
+  ev$time <- fluxCore::time_to_model(ev$time, resolved_time_spec)
 } else {
   ev$time <- .flux_coerce_time_numeric(ev$time)
 }
@@ -153,7 +155,8 @@ if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
 #' @param tables Named list of data.frames.
 #' @param specs Named list describing, for each table, id_col, time_col, vars, and optional group.
 #' @param keep_source Logical; if TRUE, include source_table column.
-#' @param ctx Optional model context. Required when times are Date/POSIXct to convert to numeric model time.
+#' @param time_spec Optional fluxCore time_spec object. Preferred when times are Date/POSIXct.
+#' @param ctx Optional compatibility context. Used only when time_spec is not supplied.
 #' @param sort Logical; if TRUE, sort observations within entity by time (then group).
 #'
 #' @return A data.frame with at least: entity_id, time, group, declared variable columns, and optional source column.
@@ -162,6 +165,7 @@ if (inherits(ev$time, "Date") || inherits(ev$time, "POSIXt")) {
 prepare_observations <- function(tables,
                                    specs,
                                    keep_source = TRUE,
+                                   time_spec = NULL,
                                    ctx = NULL,
                                    sort = TRUE) {
   if (!(is.list(tables) && length(tables) > 0 && all(vapply(tables, is.data.frame, logical(1))))) {
@@ -186,7 +190,7 @@ prepare_observations <- function(tables,
 
   out_list <- vector("list", length(tables))
   time_classes <- character(length(tables))
-  time_spec <- NULL
+  resolved_time_spec <- time_spec
 
   for (i in seq_along(tables)) {
     nm <- tbl_names[[i]]
@@ -221,8 +225,8 @@ prepare_observations <- function(tables,
     tmp$entity_id <- as.character(tmp$entity_id)
     time_classes[[i]] <- class(tmp$time)[1]
     if (inherits(tmp$time, "Date") || inherits(tmp$time, "POSIXt")) {
-      if (is.null(time_spec)) time_spec <- .flux_time_spec_or_stop(ctx, "prepare_observations")
-      tmp$time <- fluxCore::time_to_model(tmp$time, time_spec)
+      if (is.null(resolved_time_spec)) resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, "prepare_observations")
+      tmp$time <- fluxCore::time_to_model(tmp$time, resolved_time_spec)
     } else {
       tmp$time <- .flux_coerce_time_numeric(tmp$time)
     }
@@ -276,15 +280,19 @@ prepare_observations <- function(tables,
   out
 }
 
-.flux_time_spec_or_stop <- function(ctx, fn_name) {
+.flux_time_spec_or_stop <- function(time_spec, ctx, fn_name) {
+  if (!is.null(time_spec)) {
+    if (inherits(time_spec, "time_spec")) return(time_spec)
+    return(do.call(fluxCore::time_spec, time_spec))
+  }
   if (is.null(ctx) || !is.list(ctx)) {
-    stop(sprintf("%s(): ctx must be provided and must include ctx$time$unit when time columns are Date/POSIXct.", fn_name),
+    stop(sprintf("%s(): time_spec must be provided, or ctx$time$unit must be set, when time columns are Date/POSIXct.", fn_name),
          call. = FALSE)
   }
   if (is.null(ctx$time) || !is.list(ctx$time) ||
       is.null(ctx$time$unit) || !is.character(ctx$time$unit) ||
       length(ctx$time$unit) != 1L || is.na(ctx$time$unit) || ctx$time$unit == "") {
-    stop(sprintf("%s(): ctx$time$unit must be set when time columns are Date/POSIXct.", fn_name), call. = FALSE)
+    stop(sprintf("%s(): time_spec must be provided, or ctx$time$unit must be set, when time columns are Date/POSIXct.", fn_name), call. = FALSE)
   }
   fluxCore::time_spec(ctx)
 }
@@ -323,7 +331,7 @@ prepare_observations <- function(tables,
   # Date/POSIXct must be converted via fluxCore time helpers
   if (inherits(x, "Date") || inherits(x, "POSIXt")) {
     if (is.null(time_spec)) {
-      stop(sprintf("%s: calendar times require ctx$time$unit (and optional ctx$time$origin/ctx$time$zone).", where), call. = FALSE)
+      stop(sprintf("%s: calendar times require time_spec or ctx$time$unit (and optional ctx$time$origin/ctx$time$zone).", where), call. = FALSE)
     }
     return(fluxCore::time_to_model(x, time_spec))
   }

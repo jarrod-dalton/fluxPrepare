@@ -3,8 +3,10 @@
 #' Builds one dataset per spec (and optional entity chunk), writes datasets and metadata to disk, and returns a manifest of outputs.
 #'
 #' @param specs List of spec objects created by spec_state() and/or spec_event().
+#' `spec_decision()` objects are also supported.
 #' @param splits Output of prepare_splits().
-#' @param ctx Optional context list passed through to builders.
+#' @param time_spec Optional fluxCore time_spec object passed through to builders.
+#' @param ctx Optional compatibility context passed through when time_spec is not supplied.
 #' @param events Canonical event stream from prepare_events() (required for event tasks).
 #' @param observations Canonical observation store from prepare_observations() (required for state tasks).
 #' @param followup Optional follow-up table.
@@ -27,6 +29,7 @@
 #' @export
 build_ttv_batch <- function(specs,
                                splits,
+                               time_spec = NULL,
                                ctx = NULL,
                                events = NULL,
                                observations = NULL,
@@ -67,11 +70,11 @@ build_ttv_batch <- function(specs,
     fun <- if (!is.null(s$fun)) as.character(s$fun) else NA_character_
     args <- if (!is.null(s$args)) s$args else list()
 
-    if (!task %in% c("event", "state")) {
-      stop(sprintf("Spec %d: `task` must be 'event' or 'state'.", spec_id))
+    if (!task %in% c("event", "state", "decision")) {
+      stop(sprintf("Spec %d: `task` must be 'event', 'state', or 'decision'.", spec_id))
     }
-    if (!fun %in% c("build_ttv_event", "build_ttv_state")) {
-      stop(sprintf("Spec %d: `fun` must be 'build_ttv_event' or 'build_ttv_state'.", spec_id))
+    if (!fun %in% c("build_ttv_event", "build_ttv_state", "build_ttv_decision")) {
+      stop(sprintf("Spec %d: `fun` must be 'build_ttv_event', 'build_ttv_state', or 'build_ttv_decision'.", spec_id))
     }
     if (!is.list(args)) stop(sprintf("Spec %d: `args` must be a named list.", spec_id))
 
@@ -89,12 +92,25 @@ build_ttv_batch <- function(specs,
       # Merge shared args (per-spec overrides win)
       call_args <- args
       if (is.null(call_args$splits)) call_args$splits <- splits_k
+      if (!is.null(time_spec) && is.null(call_args$time_spec)) call_args$time_spec <- time_spec
       if (!is.null(ctx) && is.null(call_args$ctx)) call_args$ctx <- ctx
 
       if (task == "event") {
         if (is.null(events_k) && is.null(call_args$events)) stop("Event task requires `events`.")
         if (is.null(call_args$events)) call_args$events <- events_k
+        if (!is.null(obs_k) && is.null(call_args$observations)) call_args$observations <- obs_k
         if (!is.null(fu_k) && is.null(call_args$followup)) call_args$followup <- fu_k
+      } else if (task == "decision") {
+        if (is.null(obs_k) && is.null(call_args$observations)) stop("Decision task requires `observations`.")
+        if (is.null(call_args$observations)) call_args$observations <- obs_k
+        if (is.null(call_args$decisions)) {
+          stop("Decision task requires `decisions` supplied in spec args or call args.")
+        }
+        dec_k <- call_args$decisions
+        dec_id_col <- if (!is.null(call_args$id_col)) as.character(call_args$id_col) else "entity_id"
+        .flux_assert_data_frame(dec_k, "decision task decisions")
+        .flux_assert_has_cols(dec_k, c(dec_id_col), "decision task decisions")
+        call_args$decisions <- dec_k[dec_k[[dec_id_col]] %in% pat_ids, , drop = FALSE]
       } else {
         if (is.null(obs_k) && is.null(call_args$observations)) stop("State task requires `observations`.")
         if (is.null(call_args$observations)) call_args$observations <- obs_k

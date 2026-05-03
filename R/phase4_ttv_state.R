@@ -4,7 +4,8 @@
 #'
 #' @param observations Canonical observation store from prepare_observations().
 #' @param splits Canonical split table from prepare_splits().
-#' @param ctx Optional context list used for calendar-time follow-up coercion.
+#' @param time_spec Optional fluxCore time_spec object used for calendar-time follow-up coercion.
+#' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #' @param outcome_group Observation group used to define consecutive anchor intervals.
 #' @param outcome_vars Outcome variable names evaluated at interval end.
 #' @param predictor_vars Predictor variable names reconstructed at interval start.
@@ -31,6 +32,7 @@
 #' @export
 build_ttv_state <- function(observations,
                                splits,
+                               time_spec = NULL,
                                ctx = NULL,
                                outcome_group,
                                outcome_vars,
@@ -124,7 +126,7 @@ build_ttv_state <- function(observations,
   rownames(obs) <- NULL
 
   # Follow-up (optional)
-  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, ctx, "build_ttv_state")
+  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, time_spec, ctx, "build_ttv_state")
 
   # Build consecutive (t0, t1) intervals from the outcome group observation times
   obs_out <- obs[obs$group == outcome_group, c("entity_id", "time", outcome_vars), drop = FALSE]

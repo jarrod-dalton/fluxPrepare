@@ -44,3 +44,49 @@ test_that("build_ttv_state converts followup Date times using ctx$time", {
   expect_true(is.numeric(out$t1))
   expect_true(all(out$t1 <= 5))
 })
+
+
+test_that("build_ttv_state converts followup Date times using time_spec", {
+  splits <- prepare_splits(
+    data.frame(pid = c("a","b"), split = c("train","test")),
+    id_col = "pid", split_col = "split"
+  )
+
+  obs <- prepare_observations(
+    tables = list(
+      labs = data.frame(
+        pid = c("a","a","b","b"),
+        t   = c(1,5,2,6),
+        sbp = c(120, 130, 110, 115),
+        stringsAsFactors = FALSE
+      )
+    ),
+    specs = list(
+      labs = list(id_col = "pid", time_col = "t", vars = c("sbp"), group = "bp")
+    ),
+    sort = FALSE
+  )
+
+  followup <- data.frame(
+    entity_id = c("a","b"),
+    followup_start = as.Date(c("1970-01-01","1970-01-01")),
+    followup_end   = as.Date(c("1970-01-06","1970-01-06"))
+  )
+
+  tspec <- fluxCore::time_spec(unit = "days", origin = as.Date("1970-01-01"), zone = "UTC")
+
+  out <- build_ttv_state(
+    observations = obs,
+    splits = splits,
+    time_spec = tspec,
+    outcome_group = "bp",
+    outcome_vars = "sbp",
+    predictor_vars = "sbp",
+    followup = followup,
+    row_policy = "return_all"
+  )
+
+  expect_true(is.numeric(out$t0))
+  expect_true(is.numeric(out$t1))
+  expect_true(all(out$t1 <= 5))
+})

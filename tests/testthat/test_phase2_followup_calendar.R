@@ -30,3 +30,36 @@ test_that("build_ttv_event converts followup Date times using ctx$time", {
   expect_true(all(out$t0 == 0))
   expect_true(all(out$t1 <= 10))
 })
+
+
+test_that("build_ttv_event converts followup Date times using time_spec", {
+  splits <- prepare_splits(
+    data.frame(pid = c("a","b"), split = c("train","test")),
+    id_col = "pid", split_col = "split"
+  )
+
+  ev <- prepare_events(
+    data.frame(pid = c("a","a","b"), t = c(1,5,2), type = c("visit","mi","visit")),
+    id_col = "pid", time_col = "t", type_col = "type", sort = FALSE
+  )
+
+  followup <- data.frame(
+    entity_id = c("a","b"),
+    followup_start = as.Date(c("1970-01-01","1970-01-01")),
+    followup_end   = as.Date(c("1970-01-11","1970-01-11"))
+  )
+
+  tspec <- fluxCore::time_spec(unit = "days", origin = as.Date("1970-01-01"), zone = "UTC")
+
+  out <- build_ttv_event(
+    ev, splits,
+    time_spec = tspec,
+    event_type = "mi",
+    followup = followup
+  )
+
+  expect_true(is.numeric(out$t0))
+  expect_true(is.numeric(out$t1))
+  expect_true(all(out$t0 == 0))
+  expect_true(all(out$t1 <= 10))
+})
