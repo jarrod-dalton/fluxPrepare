@@ -17,13 +17,6 @@
 #' @param staleness Staleness passed to reconstruct_state_at().
 #' @param keep_provenance Logical; include reconstruction provenance columns.
 #' @param row_policy One of "return_all" or "drop_incomplete".
-#' @param derived_vars Optional derived variables to compute at anchors.
-#' @param derived_provider Optional derived provider.
-#' @param derived_context Optional context passed to the derived provider.
-#' @param derived_on_missing One of "na" or "error".
-#' @param keep_derived_provenance Logical; include derived availability columns.
-#' @param count_no_history How to handle count-like derived vars with no history: "na" or "zero".
-#' @param count_vars Optional count-like derived variables.
 #' @param max_intervals_per_entity Optional per-entity cap on sampled intervals.
 #' @param seed Optional integer seed used when sampling intervals.
 #'
@@ -45,18 +38,9 @@ build_ttv_state <- function(observations,
                                staleness = Inf,
                                keep_provenance = TRUE,
                                row_policy = c("return_all", "drop_incomplete"),
-                               derived_vars = NULL,
-                               derived_provider = NULL,
-                               derived_context = NULL,
-                               derived_on_missing = c("na", "error"),
-                               keep_derived_provenance = FALSE,
-                               count_no_history = c("na", "zero"),
-                               count_vars = NULL,
                                max_intervals_per_entity = NULL,
                                seed = NULL) {
   row_policy <- match.arg(row_policy)
-  derived_on_missing <- match.arg(derived_on_missing)
-  count_no_history <- match.arg(count_no_history)
 
   .flux_assert_data_frame(observations, "observations")
   .flux_assert_data_frame(splits, "splits")

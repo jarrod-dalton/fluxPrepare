@@ -18,13 +18,6 @@
 #' @param staleness Staleness passed to reconstruct_state_at().
 #' @param keep_provenance Logical; include reconstruction provenance columns.
 #' @param row_policy One of "return_all" or "drop_incomplete".
-#' @param derived_vars Optional derived-variable names to compute at decision anchors.
-#' @param derived_provider Optional provider required when derived_vars is set.
-#' @param derived_context Optional context list for derived computation.
-#' @param derived_on_missing One of "na" or "error".
-#' @param keep_derived_provenance If TRUE, include derived availability columns.
-#' @param count_no_history How to handle count-like derived vars with no history: "na" or "zero".
-#' @param count_vars Optional subset of derived vars treated as count-like.
 #' @param time_spec Optional fluxCore time_spec object used when decision times are Date/POSIXct.
 #' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #'
