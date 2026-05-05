@@ -19,7 +19,6 @@
 #' @param keep_provenance Logical; include reconstruction provenance columns.
 #' @param row_policy One of "return_all" or "drop_incomplete".
 #' @param time_spec Optional fluxCore time_spec object used when decision times are Date/POSIXct.
-#' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #'
 #' @return A data.frame with class "flux_ttv_decision".
 #'
@@ -36,8 +35,7 @@ build_ttv_decision <- function(decisions,
                                staleness = Inf,
                                keep_provenance = TRUE,
                                row_policy = c("return_all", "drop_incomplete"),
-                               time_spec = NULL,
-                               ctx = NULL) {
+                               time_spec = NULL) {
   row_policy <- match.arg(row_policy)
 
   .flux_assert_data_frame(decisions, "decisions")
@@ -82,8 +80,7 @@ build_ttv_decision <- function(decisions,
     staleness = staleness,
     keep_provenance = keep_provenance,
     row_policy = row_policy,
-    time_spec = time_spec,
-    ctx = ctx
+    time_spec = time_spec
   )
 
   split_idx <- match(out$entity_id, splits$entity_id)

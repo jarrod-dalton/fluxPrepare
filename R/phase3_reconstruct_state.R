@@ -13,7 +13,6 @@
 #' @param keep_provenance If TRUE, add per-variable provenance columns.
 #' @param row_policy One of "return_all" or "drop_incomplete".
 #' @param time_spec Optional fluxCore time_spec object used when anchor/observation times are Date/POSIXct.
-#' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #'
 #' @return A data.frame with reconstructed values at anchors and optional provenance columns.
 #'
@@ -28,8 +27,7 @@ reconstruct_state_at <- function(anchors,
                                    staleness = Inf,
                                    keep_provenance = TRUE,
                                    row_policy = c("return_all", "drop_incomplete"),
-                                   time_spec = NULL,
-                                   ctx = NULL) {
+                                   time_spec = NULL) {
   .flux_assert_data_frame(anchors, "anchors")
   .flux_assert_data_frame(observations, "observations")
   .flux_assert_has_cols(anchors, c(id_col, time_col), "anchors")
@@ -55,7 +53,7 @@ reconstruct_state_at <- function(anchors,
   a$entity_id <- as.character(a$entity_id)
   resolved_time_spec <- time_spec
   if (inherits(a$t0, "Date") || inherits(a$t0, "POSIXt")) {
-    resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, "reconstruct_state_at")
+    resolved_time_spec <- .resolve_time_spec(resolved_time_spec, "reconstruct_state_at")
   }
   a$t0 <- .flux_coerce_time_numeric(a$t0, resolved_time_spec, "anchors$t0")
   .flux_assert_time_numeric(a$t0, "anchors$t0")
@@ -67,9 +65,9 @@ reconstruct_state_at <- function(anchors,
   obs <- observations
   obs$entity_id <- as.character(obs$entity_id)
     # observations should already be numeric from prepare_observations(),
-  # but allow Date/POSIXct here when ctx is provided.
+  # but allow Date/POSIXct here when time_spec is provided.
   if (is.null(resolved_time_spec) && (inherits(obs$time, "Date") || inherits(obs$time, "POSIXt"))) {
-    resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, "reconstruct_state_at")
+    resolved_time_spec <- .resolve_time_spec(resolved_time_spec, "reconstruct_state_at")
   }
   obs$time <- .flux_coerce_time_numeric(obs$time, resolved_time_spec, "observations$time")
   .flux_assert_time_numeric(obs$time, "observations$time")

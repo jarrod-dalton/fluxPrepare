@@ -6,7 +6,6 @@
 #' `spec_decision()` objects are also supported.
 #' @param splits Output of prepare_splits().
 #' @param time_spec Optional fluxCore time_spec object passed through to builders.
-#' @param ctx Optional compatibility context passed through when time_spec is not supplied.
 #' @param events Canonical event stream from prepare_events() (required for event tasks).
 #' @param observations Canonical observation store from prepare_observations() (required for state tasks).
 #' @param followup Optional follow-up table.
@@ -30,7 +29,6 @@
 build_ttv_batch <- function(specs,
                                splits,
                                time_spec = NULL,
-                               ctx = NULL,
                                events = NULL,
                                observations = NULL,
                                followup = NULL,
@@ -93,7 +91,6 @@ build_ttv_batch <- function(specs,
       call_args <- args
       if (is.null(call_args$splits)) call_args$splits <- splits_k
       if (!is.null(time_spec) && is.null(call_args$time_spec)) call_args$time_spec <- time_spec
-      if (!is.null(ctx) && is.null(call_args$ctx)) call_args$ctx <- ctx
 
       if (task == "event") {
         if (is.null(events_k) && is.null(call_args$events)) stop("Event task requires `events`.")

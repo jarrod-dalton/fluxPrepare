@@ -1,4 +1,4 @@
-test_that("build_ttv_event converts followup Date times using ctx$time", {
+test_that("build_ttv_event converts followup Date times using time_spec list", {
   splits <- prepare_splits(
     data.frame(pid = c("a","b"), split = c("train","test")),
     id_col = "pid", split_col = "split"
@@ -16,11 +16,11 @@ test_that("build_ttv_event converts followup Date times using ctx$time", {
     followup_end   = as.Date(c("1970-01-11","1970-01-11"))
   )
 
-  ctx <- list(time = list(unit = "days", zone = "UTC"))
+  tspec <- list(unit = "days", zone = "UTC")
 
   out <- build_ttv_event(
     ev, splits,
-    ctx = ctx,
+    time_spec = tspec,
     event_type = "mi",
     followup = followup
   )

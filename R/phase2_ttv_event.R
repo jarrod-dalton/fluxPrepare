@@ -5,7 +5,6 @@
 #' @param events Canonical event stream from prepare_events().
 #' @param splits Canonical split table from prepare_splits().
 #' @param time_spec Optional fluxCore time_spec object used for calendar-time follow-up coercion.
-#' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #' @param observations Optional canonical observation store from prepare_observations(). Required when predictor_vars is supplied.
 #' @param predictor_vars Optional predictor variable names reconstructed at t0.
 #' @param lookback Lookback passed to reconstruct_state_at() when predictor_vars is supplied.
@@ -25,7 +24,6 @@
 build_ttv_event <- function(events,
                                splits,
                                time_spec = NULL,
-                               ctx = NULL,
                                observations = NULL,
                                predictor_vars = NULL,
                                lookback = Inf,
@@ -95,7 +93,7 @@ build_ttv_event <- function(events,
   }
 
   # Compute follow-up start/end if provided
-  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, time_spec, ctx, "build_ttv_event")
+  fu <- .flux_prepare_followup(followup, splits, fu_start_col, fu_end_col, death_col, time_spec, "build_ttv_event")
 
   # Entity universe
   pats <- splits$entity_id
@@ -250,7 +248,6 @@ build_ttv_event <- function(events,
 #' @param spec A spec_event_process() object.
 #' @param followup Optional follow-up table used for censoring.
 #' @param time_spec Optional fluxCore time_spec object used for calendar-time follow-up coercion.
-#' @param ctx Optional compatibility context used only when time_spec is not supplied.
 #'
 #' @return A start-stop data.frame with one or more rows per entity, including interval bounds and terminal event indicators.
 #'
@@ -260,8 +257,7 @@ build_ttv_event_process <- function(events,
                                       splits,
                                       spec,
                                       followup = NULL,
-                                      time_spec = NULL,
-                                      ctx = NULL) {
+                                      time_spec = NULL) {
   .flux_assert_data_frame(events, "events")
   .flux_assert_data_frame(observations, "observations")
   .flux_assert_data_frame(splits, "splits")
@@ -299,7 +295,7 @@ build_ttv_event_process <- function(events,
   .flux_assert_time_numeric(observations$time, "build_ttv_event_process(): observations$time")
 
   # Compute follow-up
-  fu <- .flux_prepare_followup(followup, splits, spec$fu_start_col, spec$fu_end_col, spec$death_col, time_spec, ctx,
+  fu <- .flux_prepare_followup(followup, splits, spec$fu_start_col, spec$fu_end_col, spec$death_col, time_spec,
                              "build_ttv_event_process")
 
   # Determine t0 per entity (same policies as build_ttv_event)
@@ -424,7 +420,7 @@ build_ttv_event_process <- function(events,
       # reconstruct as-of values at baseline and all candidate times for meaningful-change checks
       anchors <- data.frame(entity_id = rep(pid, 1 + length(cand)), t0 = c(t0p, cand), stringsAsFactors = FALSE)
       rec <- reconstruct_state_at(anchors = anchors, observations = observations, vars = seg_vars,
-                                     keep_provenance = FALSE, ctx = ctx)
+                                     keep_provenance = FALSE)
       # baseline values
       last_vals <- as.list(rec[1, seg_vars, drop = FALSE])
       rec_map <- rec[-1, , drop = FALSE]
@@ -574,7 +570,7 @@ build_ttv_event_process <- function(events,
   !identical(old, new)
 }
 
-.flux_prepare_followup <- function(followup, splits, fu_start_col, fu_end_col, death_col, time_spec, ctx, fn_name) {
+.flux_prepare_followup <- function(followup, splits, fu_start_col, fu_end_col, death_col, time_spec, fn_name) {
   if (is.null(followup)) return(NULL)
   .flux_assert_data_frame(followup, "followup")
   cols <- c("entity_id", fu_start_col, fu_end_col)
@@ -588,7 +584,7 @@ resolved_time_spec <- time_spec
 if (inherits(fu[[fu_start_col]], "Date") || inherits(fu[[fu_start_col]], "POSIXt") ||
     inherits(fu[[fu_end_col]], "Date") || inherits(fu[[fu_end_col]], "POSIXt") ||
     (!is.null(death_col) && (inherits(followup[[death_col]], "Date") || inherits(followup[[death_col]], "POSIXt")))) {
-  resolved_time_spec <- .flux_time_spec_or_stop(resolved_time_spec, ctx, fn_name)
+  resolved_time_spec <- .resolve_time_spec(resolved_time_spec, fn_name)
 }
 
 

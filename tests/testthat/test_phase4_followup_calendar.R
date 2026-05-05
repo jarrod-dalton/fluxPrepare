@@ -1,4 +1,4 @@
-test_that("build_ttv_state converts followup Date times using ctx$time", {
+test_that("build_ttv_state converts followup Date times using time_spec list", {
   splits <- prepare_splits(
     data.frame(pid = c("a","b"), split = c("train","test")),
     id_col = "pid", split_col = "split"
@@ -17,7 +17,6 @@ test_that("build_ttv_state converts followup Date times using ctx$time", {
     specs = list(
       labs = list(id_col = "pid", time_col = "t", vars = c("sbp"), group = "bp")
     ),
-    ctx = NULL,
     sort = FALSE
   )
 
@@ -27,12 +26,12 @@ test_that("build_ttv_state converts followup Date times using ctx$time", {
     followup_end   = as.Date(c("1970-01-06","1970-01-06"))
   )
 
-  ctx <- list(time = list(unit = "days", zone = "UTC"))
+  tspec <- list(unit = "days", zone = "UTC")
 
   out <- build_ttv_state(
     observations = obs,
     splits = splits,
-    ctx = ctx,
+    time_spec = tspec,
     outcome_group = "bp",
     outcome_vars = "sbp",
     predictor_vars = "sbp",
