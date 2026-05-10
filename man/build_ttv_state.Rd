@@ -8,7 +8,6 @@ build_ttv_state(
   observations,
   splits,
   time_spec = NULL,
-  ctx = NULL,
   outcome_group,
   outcome_vars,
   predictor_vars,
@@ -20,13 +19,6 @@ build_ttv_state(
   staleness = Inf,
   keep_provenance = TRUE,
   row_policy = c("return_all", "drop_incomplete"),
-  derived_vars = NULL,
-  derived_provider = NULL,
-  derived_context = NULL,
-  derived_on_missing = c("na", "error"),
-  keep_derived_provenance = FALSE,
-  count_no_history = c("na", "zero"),
-  count_vars = NULL,
   max_intervals_per_entity = NULL,
   seed = NULL
 )
@@ -37,8 +29,6 @@ build_ttv_state(
 \item{splits}{Canonical split table from prepare_splits().}
 
 \item{time_spec}{Optional fluxCore time_spec object used for calendar-time follow-up coercion.}
-
-\item{ctx}{Optional compatibility context used only when time_spec is not supplied.}
 
 \item{outcome_group}{Observation group used to define consecutive anchor intervals.}
 
@@ -61,20 +51,6 @@ build_ttv_state(
 \item{keep_provenance}{Logical; include reconstruction provenance columns.}
 
 \item{row_policy}{One of "return_all" or "drop_incomplete".}
-
-\item{derived_vars}{Optional derived variables to compute at anchors.}
-
-\item{derived_provider}{Optional derived provider.}
-
-\item{derived_context}{Optional context passed to the derived provider.}
-
-\item{derived_on_missing}{One of "na" or "error".}
-
-\item{keep_derived_provenance}{Logical; include derived availability columns.}
-
-\item{count_no_history}{How to handle count-like derived vars with no history: "na" or "zero".}
-
-\item{count_vars}{Optional count-like derived variables.}
 
 \item{max_intervals_per_entity}{Optional per-entity cap on sampled intervals.}
 

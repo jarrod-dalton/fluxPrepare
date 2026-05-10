@@ -9,7 +9,6 @@ prepare_observations(
   specs,
   keep_source = TRUE,
   time_spec = NULL,
-  ctx = NULL,
   sort = TRUE
 )
 }
@@ -21,8 +20,6 @@ prepare_observations(
 \item{keep_source}{Logical; if TRUE, include source_table column.}
 
 \item{time_spec}{Optional fluxCore time_spec object. Preferred when times are Date/POSIXct.}
-
-\item{ctx}{Optional compatibility context. Used only when time_spec is not supplied.}
 
 \item{sort}{Logical; if TRUE, sort observations within entity by time (then group).}
 }

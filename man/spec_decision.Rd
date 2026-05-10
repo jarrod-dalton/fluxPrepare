@@ -12,14 +12,7 @@ spec_decision(
   lookback = Inf,
   staleness = Inf,
   keep_provenance = TRUE,
-  row_policy = c("return_all", "drop_incomplete"),
-  derived_vars = NULL,
-  derived_provider = NULL,
-  derived_context = NULL,
-  derived_on_missing = c("na", "error"),
-  keep_derived_provenance = FALSE,
-  count_no_history = c("na", "zero"),
-  count_vars = NULL
+  row_policy = c("return_all", "drop_incomplete")
 )
 }
 \arguments{
@@ -38,20 +31,6 @@ spec_decision(
 \item{keep_provenance}{Logical passed to build_ttv_decision().}
 
 \item{row_policy}{One of "return_all" or "drop_incomplete".}
-
-\item{derived_vars}{Optional character vector of derived variable names.}
-
-\item{derived_provider}{Optional provider identifier.}
-
-\item{derived_context}{Optional list passed through to build_ttv_decision().}
-
-\item{derived_on_missing}{One of "na" or "error".}
-
-\item{keep_derived_provenance}{Logical passed to build_ttv_decision().}
-
-\item{count_no_history}{One of "na" or "zero".}
-
-\item{count_vars}{Optional character vector of count-like derived variables.}
 }
 \value{
 A spec object with class c("spec_decision", "flux_spec").

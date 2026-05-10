@@ -418,6 +418,15 @@ segment_rules_combine <- function(...) {
 #' @param fu_start_col Follow-up start column name.
 #' @param fu_end_col Follow-up end column name.
 #' @param death_col Optional death time column name.
+#' @param predictor_vars Optional character vector of predictor variables to reconstruct at each
+#'   interval's t0 via \code{reconstruct_state_at()}. Use \code{"all"} to reconstruct all
+#'   non-metadata variables found in observations. When NULL (the default), no reconstruction is
+#'   performed and the output contains only interval columns.
+#' @param lookback Lookback window for predictor reconstruction (default \code{Inf}).
+#' @param staleness Maximum staleness for predictor reconstruction (default \code{Inf}).
+#' @param keep_provenance Logical; include reconstruction provenance columns (default \code{FALSE}).
+#' @param row_policy One of \code{"return_all"} (default) or \code{"drop_incomplete"}.
+#'   When \code{"drop_incomplete"}, rows with any missing predictor values are removed.
 #'
 #' @return A spec object with class c("spec_event_process", "flux_spec").
 #'
@@ -433,7 +442,12 @@ spec_event_process <- function(event_types,
                                   fixed_t0 = 0,
                                   fu_start_col = "followup_start",
                                   fu_end_col = "followup_end",
-                                  death_col = NULL) {
+                                  death_col = NULL,
+                                  predictor_vars = NULL,
+                                  lookback = Inf,
+                                  staleness = Inf,
+                                  keep_provenance = FALSE,
+                                  row_policy = c("return_all", "drop_incomplete")) {
 
   if (!is.character(event_types) || length(event_types) < 1L || anyNA(event_types) || any(trimws(event_types) == "")) {
     stop("spec_event_process(): event_types must be a non-empty character vector with no missing/empty values.", call. = FALSE)
@@ -490,6 +504,35 @@ spec_event_process <- function(event_types,
     death_col <- as.character(death_col)
   }
 
+  if (!is.null(predictor_vars)) {
+    if (identical(predictor_vars, "all")) {
+      # "all" is stored as-is; resolved at build time from observation columns
+      predictor_vars <- "all"
+    } else {
+      if (!is.character(predictor_vars) || length(predictor_vars) < 1L) {
+        stop("spec_event_process(): predictor_vars must be NULL, \"all\", or a non-empty character vector.", call. = FALSE)
+      }
+      predictor_vars <- unique(as.character(predictor_vars))
+    }
+  }
+
+  if (!is.numeric(lookback) || length(lookback) != 1L || is.na(lookback)) {
+    stop("spec_event_process(): lookback must be a single numeric value (use Inf for no limit).", call. = FALSE)
+  }
+  lookback <- as.numeric(lookback)
+
+  if (!is.numeric(staleness) || length(staleness) != 1L || is.na(staleness)) {
+    stop("spec_event_process(): staleness must be a single numeric value (use Inf for no limit).", call. = FALSE)
+  }
+  staleness <- as.numeric(staleness)
+
+  if (!is.logical(keep_provenance) || length(keep_provenance) != 1L || is.na(keep_provenance)) {
+    stop("spec_event_process(): keep_provenance must be TRUE/FALSE.", call. = FALSE)
+  }
+  keep_provenance <- isTRUE(keep_provenance)
+
+  row_policy <- match.arg(row_policy)
+
   spec <- list(
     task = "event_process",
     name = name,
@@ -503,7 +546,12 @@ spec_event_process <- function(event_types,
     fixed_t0 = fixed_t0,
     fu_start_col = fu_start_col,
     fu_end_col = fu_end_col,
-    death_col = death_col
+    death_col = death_col,
+    predictor_vars = predictor_vars,
+    lookback = lookback,
+    staleness = staleness,
+    keep_provenance = keep_provenance,
+    row_policy = row_policy
   )
 
   class(spec) <- c("spec_event_process", "flux_spec")
@@ -558,6 +606,7 @@ print.spec_event_process <- function(x, ...) {
   if (!is.null(x$name) && nzchar(x$name)) cat("name:           ", x$name, "\n", sep = "")
   cat("event_types:     ", paste(x$event_types, collapse = ", "), "\n", sep = "")
   if (!is.null(x$split_on_groups)) cat("split_on_groups: ", paste(x$split_on_groups, collapse = ", "), "\n", sep = "")
+  if (!is.null(x$predictor_vars)) cat("predictor_vars:  ", paste(x$predictor_vars, collapse = ", "), "\n", sep = "")
   cat("min_dt:          ", x$min_dt, "\n", sep = "")
   cat("t0_strategy:     ", x$t0_strategy, "\n", sep = "")
   if (!is.null(x$fixed_t0)) cat("fixed_t0:        ", x$fixed_t0, "\n", sep = "")

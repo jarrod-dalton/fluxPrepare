@@ -8,7 +8,6 @@ build_ttv_event(
   events,
   splits,
   time_spec = NULL,
-  ctx = NULL,
   observations = NULL,
   predictor_vars = NULL,
   lookback = Inf,
@@ -29,8 +28,6 @@ build_ttv_event(
 \item{splits}{Canonical split table from prepare_splits().}
 
 \item{time_spec}{Optional fluxCore time_spec object used for calendar-time follow-up coercion.}
-
-\item{ctx}{Optional compatibility context used only when time_spec is not supplied.}
 
 \item{observations}{Optional canonical observation store from prepare_observations(). Required when predictor_vars is supplied.}
 

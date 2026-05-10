@@ -16,7 +16,12 @@ spec_event_process(
   fixed_t0 = 0,
   fu_start_col = "followup_start",
   fu_end_col = "followup_end",
-  death_col = NULL
+  death_col = NULL,
+  predictor_vars = NULL,
+  lookback = Inf,
+  staleness = Inf,
+  keep_provenance = FALSE,
+  row_policy = c("return_all", "drop_incomplete")
 )
 }
 \arguments{
@@ -43,6 +48,20 @@ spec_event_process(
 \item{fu_end_col}{Follow-up end column name.}
 
 \item{death_col}{Optional death time column name.}
+
+\item{predictor_vars}{Optional character vector of predictor variables to reconstruct at each
+interval's t0 via \code{reconstruct_state_at()}. Use \code{"all"} to reconstruct all
+non-metadata variables found in observations. When NULL (the default), no reconstruction is
+performed and the output contains only interval columns.}
+
+\item{lookback}{Lookback window for predictor reconstruction (default \code{Inf}).}
+
+\item{staleness}{Maximum staleness for predictor reconstruction (default \code{Inf}).}
+
+\item{keep_provenance}{Logical; include reconstruction provenance columns (default \code{FALSE}).}
+
+\item{row_policy}{One of \code{"return_all"} (default) or \code{"drop_incomplete"}.
+When \code{"drop_incomplete"}, rows with any missing predictor values are removed.}
 }
 \value{
 A spec object with class c("spec_event_process", "flux_spec").

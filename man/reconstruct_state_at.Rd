@@ -15,15 +15,7 @@ reconstruct_state_at(
   staleness = Inf,
   keep_provenance = TRUE,
   row_policy = c("return_all", "drop_incomplete"),
-  derived_vars = NULL,
-  derived_provider = NULL,
-  derived_context = NULL,
-  derived_on_missing = c("na", "error"),
-  keep_derived_provenance = FALSE,
-  count_no_history = c("na", "zero"),
-  count_vars = NULL,
-  time_spec = NULL,
-  ctx = NULL
+  time_spec = NULL
 )
 }
 \arguments{
@@ -47,23 +39,7 @@ reconstruct_state_at(
 
 \item{row_policy}{One of "return_all" or "drop_incomplete".}
 
-\item{derived_vars}{Optional derived-variable names to compute at anchors.}
-
-\item{derived_provider}{Optional provider required when derived_vars is set.}
-
-\item{derived_context}{Optional context list for derived computation.}
-
-\item{derived_on_missing}{One of "na" or "error".}
-
-\item{keep_derived_provenance}{If TRUE, include derived availability columns.}
-
-\item{count_no_history}{How to handle count-like derived vars with no history: "na" or "zero".}
-
-\item{count_vars}{Optional subset of derived vars treated as count-like.}
-
 \item{time_spec}{Optional fluxCore time_spec object used when anchor/observation times are Date/POSIXct.}
-
-\item{ctx}{Optional compatibility context used only when time_spec is not supplied.}
 }
 \value{
 A data.frame with reconstructed values at anchors and optional provenance columns.

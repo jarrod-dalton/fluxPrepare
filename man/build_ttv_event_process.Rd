@@ -10,8 +10,7 @@ build_ttv_event_process(
   splits,
   spec,
   followup = NULL,
-  time_spec = NULL,
-  ctx = NULL
+  time_spec = NULL
 )
 }
 \arguments{
@@ -26,8 +25,6 @@ build_ttv_event_process(
 \item{followup}{Optional follow-up table used for censoring.}
 
 \item{time_spec}{Optional fluxCore time_spec object used for calendar-time follow-up coercion.}
-
-\item{ctx}{Optional compatibility context used only when time_spec is not supplied.}
 }
 \value{
 A start-stop data.frame with one or more rows per entity, including interval bounds and terminal event indicators.

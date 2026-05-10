@@ -288,6 +288,25 @@ build_ttv_event_process <- function(events,
   if (!is.null(spec$segment_on_vars)) keep_vars <- as.character(spec$segment_on_vars)
   keep_cols <- unique(c("entity_id", "time", "group", keep_vars))
   .flux_assert_has_cols(observations, keep_cols, "observations")
+
+  # Resolve predictor_vars (may need full observations for "all" and for reconstruction)
+  pred_vars <- spec$predictor_vars
+  if (!is.null(pred_vars)) {
+    meta_cols <- c("entity_id", "time", "group")
+    if (identical(pred_vars, "all")) {
+      pred_vars <- setdiff(names(observations), meta_cols)
+      if (length(pred_vars) == 0L) {
+        stop("build_ttv_event_process(): predictor_vars = 'all' but observations has no non-metadata columns.", call. = FALSE)
+      }
+    }
+    .flux_assert_has_cols(observations, pred_vars, "observations (predictor_vars)")
+    # Keep a copy of observations with predictor columns for reconstruction
+    recon_obs <- observations
+    recon_obs$entity_id <- as.character(recon_obs$entity_id)
+    recon_obs$time <- .flux_coerce_time_numeric(recon_obs$time)
+    .flux_assert_time_numeric(recon_obs$time, "build_ttv_event_process(): observations$time (predictor)")
+  }
+
   observations <- observations[, keep_cols, drop = FALSE]
   observations$entity_id <- as.character(observations$entity_id)
   observations$group <- as.character(observations$group)
@@ -500,6 +519,29 @@ build_ttv_event_process <- function(events,
 
   out <- do.call(rbind, rows)
   rownames(out) <- NULL
+
+  # Reconstruct predictor variables at each interval's t0
+  if (!is.null(pred_vars) && nrow(out) > 0L) {
+    anchors <- data.frame(entity_id = out$entity_id, t0 = out$t0, stringsAsFactors = FALSE)
+    x <- reconstruct_state_at(
+      anchors = anchors,
+      observations = recon_obs,
+      vars = pred_vars,
+      id_col = "entity_id",
+      time_col = "t0",
+      lookback = spec$lookback,
+      staleness = spec$staleness,
+      keep_provenance = spec$keep_provenance
+    )
+    x_keep <- setdiff(names(x), c("entity_id", "t0"))
+    out <- cbind(out, x[, x_keep, drop = FALSE])
+
+    if (identical(spec$row_policy, "drop_incomplete")) {
+      complete <- stats::complete.cases(out[, pred_vars, drop = FALSE])
+      out <- out[complete, , drop = FALSE]
+      rownames(out) <- NULL
+    }
+  }
 
   attr(out, "spec") <- spec
   meta <- list(

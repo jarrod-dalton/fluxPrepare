@@ -8,7 +8,6 @@ build_ttv_batch(
   specs,
   splits,
   time_spec = NULL,
-  ctx = NULL,
   events = NULL,
   observations = NULL,
   followup = NULL,
@@ -29,8 +28,6 @@ build_ttv_batch(
 \item{splits}{Output of prepare_splits().}
 
 \item{time_spec}{Optional fluxCore time_spec object passed through to builders.}
-
-\item{ctx}{Optional compatibility context passed through when time_spec is not supplied.}
 
 \item{events}{Canonical event stream from prepare_events() (required for event tasks).}
 
