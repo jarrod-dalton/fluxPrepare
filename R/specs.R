@@ -11,6 +11,8 @@
 #' @param staleness Staleness window passed to build_ttv_state().
 #' @param keep_provenance Logical passed to build_ttv_state().
 #' @param row_policy One of "return_all" or "drop_incomplete".
+#' @param outcome_prefix Character prefix for outcome column names (default \code{"outcome_"}).
+#'   Set to \code{NULL} to use \code{make.unique()} (legacy behavior).
 #'
 #' @return A spec object with class c("spec_state", "flux_spec").
 #'
@@ -22,8 +24,9 @@ spec_state <- function(schema,
                           name = NULL,
                           lookback = Inf,
                           staleness = Inf,
-                          keep_provenance = TRUE,
-                          row_policy = c("return_all", "drop_incomplete")) {
+                          keep_provenance = FALSE,
+                          row_policy = c("return_all", "drop_incomplete"),
+                          outcome_prefix = "outcome_") {
 
   row_policy <- match.arg(row_policy)
 
@@ -69,6 +72,12 @@ spec_state <- function(schema,
   }
   keep_provenance <- isTRUE(keep_provenance)
 
+  if (!is.null(outcome_prefix)) {
+    if (!is.character(outcome_prefix) || length(outcome_prefix) != 1L || is.na(outcome_prefix)) {
+      stop("spec_state(): outcome_prefix must be NULL or a single character string.", call. = FALSE)
+    }
+  }
+
   spec <- list(
     name = name,
     task = "state",
@@ -81,7 +90,8 @@ spec_state <- function(schema,
       lookback = lookback,
       staleness = staleness,
       keep_provenance = keep_provenance,
-      row_policy = row_policy
+      row_policy = row_policy,
+      outcome_prefix = outcome_prefix
     )
   )
 

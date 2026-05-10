@@ -12,8 +12,9 @@ spec_state(
   name = NULL,
   lookback = Inf,
   staleness = Inf,
-  keep_provenance = TRUE,
-  row_policy = c("return_all", "drop_incomplete")
+  keep_provenance = FALSE,
+  row_policy = c("return_all", "drop_incomplete"),
+  outcome_prefix = "outcome_"
 )
 }
 \arguments{
@@ -34,6 +35,9 @@ spec_state(
 \item{keep_provenance}{Logical passed to build_ttv_state().}
 
 \item{row_policy}{One of "return_all" or "drop_incomplete".}
+
+\item{outcome_prefix}{Character prefix for outcome column names (default \code{"outcome_"}).
+Set to \code{NULL} to use \code{make.unique()} (legacy behavior).}
 }
 \value{
 A spec object with class c("spec_state", "flux_spec").

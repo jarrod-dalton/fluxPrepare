@@ -17,8 +17,9 @@ build_ttv_state(
   death_col = NULL,
   lookback = Inf,
   staleness = Inf,
-  keep_provenance = TRUE,
+  keep_provenance = FALSE,
   row_policy = c("return_all", "drop_incomplete"),
+  outcome_prefix = "outcome_",
   max_intervals_per_entity = NULL,
   seed = NULL
 )
@@ -51,6 +52,9 @@ build_ttv_state(
 \item{keep_provenance}{Logical; include reconstruction provenance columns.}
 
 \item{row_policy}{One of "return_all" or "drop_incomplete".}
+
+\item{outcome_prefix}{Character prefix for outcome column names (default \code{"outcome_"}).
+Set to \code{NULL} to use \code{make.unique()} (legacy behavior).}
 
 \item{max_intervals_per_entity}{Optional per-entity cap on sampled intervals.}
 

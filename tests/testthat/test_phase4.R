@@ -38,8 +38,8 @@ test_that("build_ttv_state builds consecutive intervals and reconstructs predict
   expect_equal(out$dbp, c(80, 85, 70))
   expect_equal(out$.prov_sbp, c("observed", "observed", "observed"))
 
-  # outcome sbp at t1
-  expect_equal(out$sbp.1, c(130, 128, 115))
+  # outcome sbp at t1 (prefixed)
+  expect_equal(out$outcome_sbp, c(130, 128, 115))
 })
 
 test_that("build_ttv_state censors intervals and sets outcomes to NA", {
@@ -77,8 +77,8 @@ test_that("build_ttv_state censors intervals and sets outcomes to NA", {
   expect_equal(out$t1, c(10, 12))
   expect_equal(out$censored, c(FALSE, TRUE))
   expect_equal(out$end_type, c("observed", "followup_end"))
-  expect_true(is.na(out$sbp.1[2]))
-  expect_equal(out$sbp.1[1], 130)
+  expect_true(is.na(out$outcome_sbp[2]))
+  expect_equal(out$outcome_sbp[1], 130)
 })
 
 test_that("build_ttv_state supports multivariate outcomes and sampling per entity", {
@@ -120,7 +120,7 @@ test_that("build_ttv_state supports multivariate outcomes and sampling per entit
 
   expect_equal(nrow(out), 2)
   expect_true(all(out$entity_id %in% c("a", "b")))
-  expect_true(all(c("glucose", "sodium") %in% names(out)))
+  expect_true(all(c("outcome_glucose", "outcome_sodium") %in% names(out)))
 
   # sampling is reproducible
   out2 <- build_ttv_state(

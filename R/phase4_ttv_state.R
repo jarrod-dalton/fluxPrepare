@@ -16,6 +16,8 @@
 #' @param staleness Staleness passed to reconstruct_state_at().
 #' @param keep_provenance Logical; include reconstruction provenance columns.
 #' @param row_policy One of "return_all" or "drop_incomplete".
+#' @param outcome_prefix Character prefix for outcome column names (default \code{"outcome_"}).
+#'   Set to \code{NULL} to use \code{make.unique()} (legacy behavior).
 #' @param max_intervals_per_entity Optional per-entity cap on sampled intervals.
 #' @param seed Optional integer seed used when sampling intervals.
 #'
@@ -34,11 +36,18 @@ build_ttv_state <- function(observations,
                                death_col = NULL,
                                lookback = Inf,
                                staleness = Inf,
-                               keep_provenance = TRUE,
+                               keep_provenance = FALSE,
                                row_policy = c("return_all", "drop_incomplete"),
+                               outcome_prefix = "outcome_",
                                max_intervals_per_entity = NULL,
                                seed = NULL) {
   row_policy <- match.arg(row_policy)
+
+  if (!is.null(outcome_prefix)) {
+    if (!is.character(outcome_prefix) || length(outcome_prefix) != 1L || is.na(outcome_prefix)) {
+      stop("build_ttv_state(): outcome_prefix must be NULL or a single character string.", call. = FALSE)
+    }
+  }
 
   .flux_assert_data_frame(observations, "observations")
   .flux_assert_data_frame(splits, "splits")
@@ -297,13 +306,16 @@ build_ttv_state <- function(observations,
   x_keep <- setdiff(names(x), c("entity_id", "t0"))
   out <- cbind(out, x[, x_keep, drop = FALSE])
 
-  # Outcomes
+  # Outcomes — apply prefix to distinguish from predictors
+  if (!is.null(outcome_prefix)) {
+    names(y) <- paste0(outcome_prefix, names(y))
+  }
   out <- cbind(out, y)
 
-  # Ensure deterministic unique column names when predictors and outcomes overlap
-  # (e.g., predictor sbp at t0 and outcome sbp at t1). Base cbind/data.frame may
-  # allow duplicate names; tests and downstream use expect make.unique-style names.
-  names(out) <- make.unique(names(out), sep = ".")
+  # Legacy fallback: when outcome_prefix is NULL, use make.unique to disambiguate
+  if (is.null(outcome_prefix)) {
+    names(out) <- make.unique(names(out), sep = ".")
+  }
 
   rownames(out) <- NULL
 
