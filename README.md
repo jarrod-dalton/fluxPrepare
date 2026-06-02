@@ -1,6 +1,7 @@
 # fluxPrepare
 [![Release](https://img.shields.io/github/v/release/jarrod-dalton/fluxPrepare?display_name=tag)](https://github.com/jarrod-dalton/fluxPrepare/releases)
 [![Downloads](https://img.shields.io/github/downloads/jarrod-dalton/fluxPrepare/total)](https://github.com/jarrod-dalton/fluxPrepare/releases)
+[![r-universe](https://jarrod-dalton.r-universe.dev/badges/fluxPrepare)](https://jarrod-dalton.r-universe.dev/fluxPrepare)
 [![License: LGPL-3](https://img.shields.io/badge/license-LGPL--3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Language: R](https://img.shields.io/badge/language-R-276DC3?logo=r&logoColor=white)](https://www.r-project.org/)
 
