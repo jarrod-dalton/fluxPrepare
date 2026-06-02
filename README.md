@@ -1,6 +1,5 @@
 # fluxPrepare
 [![Release](https://img.shields.io/github/v/release/jarrod-dalton/fluxPrepare?display_name=tag)](https://github.com/jarrod-dalton/fluxPrepare/releases)
-[![Downloads](https://img.shields.io/github/downloads/jarrod-dalton/fluxPrepare/total)](https://github.com/jarrod-dalton/fluxPrepare/releases)
 [![r-universe](https://jarrod-dalton.r-universe.dev/badges/fluxPrepare)](https://jarrod-dalton.r-universe.dev/fluxPrepare)
 [![License: LGPL-3](https://img.shields.io/badge/license-LGPL--3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Language: R](https://img.shields.io/badge/language-R-276DC3?logo=r&logoColor=white)](https://www.r-project.org/)
@@ -13,6 +12,16 @@ This package is intentionally **spec-first** and **schema-aligned**:
 - **State** is a schema-defined snapshot **as-of an anchor time** (`t0`), reconstructed under explicit rules.
 - **Derived variables** are **state transformations** (not ad hoc ML features) and must be evaluated using the
   same machinery used during simulation to guarantee **training/application equivalence**.
+
+## Installation
+
+```r
+# Latest stable release (recommended):
+install.packages("fluxPrepare", repos = "https://jarrod-dalton.r-universe.dev")
+
+# Pre-release install from source code:
+remotes::install_github("jarrod-dalton/fluxPrepare")
+```
 
 ## Scope (locked)
 
