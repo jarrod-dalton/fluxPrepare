@@ -1,3 +1,9 @@
+## fluxPrepare 2.1.0
+
+- Coordinated ecosystem alignment to fluxCore 2.1.0.
+- Dependency floor updated to `fluxCore (>= 2.1.0)`.
+- No functional changes to the fluxPrepare API.
+
 ## fluxPrepare 2.0.0
 
 - Ecosystem alignment to fluxCore 2.0.0.
